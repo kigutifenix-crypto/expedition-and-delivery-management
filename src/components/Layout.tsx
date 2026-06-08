@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Menu, Bell, Search, User, X } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { 
   LayoutDashboard, 
   Package, 
@@ -30,6 +31,37 @@ const menuItems = [
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userName, setUserName] = useState<string>('Usuário');
+  const [userRole, setUserRole] = useState<string>('');
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user?.email) {
+          // Fetch user data from users table
+          const { data, error } = await supabase
+            .from('users')
+            .select('name, role')
+            .eq('email', session.user.email)
+            .single();
+
+          if (data && !error) {
+            setUserName(data.name || 'Usuário');
+            setUserRole(data.role || '');
+          } else {
+            // Fallback: use email as name if not found in users table
+            setUserName(session.user.email.split('@')[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -96,8 +128,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <div className="h-8 w-px bg-slate-200 mx-1 lg:mx-2" />
             <div className="flex items-center gap-3">
               <div className="hidden sm:block text-right">
-                <p className="text-sm font-semibold text-slate-700 leading-tight">Ricardo Silva</p>
-                <p className="text-[11px] text-slate-500 font-medium">Gerente de Logística</p>
+                <p className="text-sm font-semibold text-slate-700 leading-tight">{userName}</p>
+                <p className="text-[11px] text-slate-500 font-medium">{userRole}</p>
               </div>
               <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 border border-slate-300">
                 <User className="w-5 h-5" />
