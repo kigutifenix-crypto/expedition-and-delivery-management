@@ -771,7 +771,7 @@ export const NewExpedition = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-6">
-                {['Estética', 'Placa ID', 'Carga Montada', 'Equipamentos', 'Acessórios', 'Caminhão'].map((label, idx) => {
+                {['Estética', 'Placa ID', 'Carga Montada', 'Equipamentos', 'Acessórios', 'Caminhão', 'Nota Fiscal'].map((label, idx) => {
                   const cardPhoto = photos.find((photo) => photo.label === label);
                   const count = photos.filter((photo) => photo.label === label).length;
 
@@ -842,6 +842,7 @@ export const NewExpedition = () => {
                 }}
                 type="file"
                 accept="image/*"
+                capture="environment"
                 multiple
                 className="hidden"
                 onChange={handleFileUpload}
@@ -854,7 +855,7 @@ export const NewExpedition = () => {
                 className="w-full mt-6 flex items-center justify-center gap-2 bg-slate-800 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-slate-900 disabled:opacity-60 transition-all"
               >
                 <Upload size={18} />
-                {uploadingPhoto ? 'Enviando...' : 'Upload de Arquivos'}
+                {uploadingPhoto ? 'Enviando...' : 'Adicionar foto'}
               </button>
 
               {uploadMessage && (

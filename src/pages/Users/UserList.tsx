@@ -16,13 +16,15 @@ export const UserList = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [query, setQuery] = useState('');
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'motorista' });
+  const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
+  const [editForm, setEditForm] = useState<Partial<UserItem>>({ id: '', name: '', email: '', role: 'motorista', status: 'Ativo' });
   const [loading, setLoading] = useState(true);
   const [savingUser, setSavingUser] = useState(false);
 
   useEffect(() => {
     const loadUsers = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from<UserItem>('users').select('*').order('name');
+      const { data, error } = await supabase.from('users').select('*').order('name');
       if (error) {
         console.error('Falha ao carregar usuários reais:', error.message);
       } else if (data) {
@@ -108,9 +110,41 @@ export const UserList = () => {
   const handleEdit = (id: string) => {
     const user = users.find((item) => item.id === id);
     if (!user) return;
-    const newName = window.prompt('Editar nome do usuário', user.name);
-    if (!newName) return;
-    setUsers((current) => current.map((item) => (item.id === id ? { ...item, name: newName } : item)));
+    setSelectedUser(user);
+    setEditForm({ ...user });
+    setShowAdd(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editForm.id || !editForm.name?.trim() || !editForm.email?.trim()) return;
+    setSavingUser(true);
+
+    const payload = {
+      name: editForm.name,
+      email: editForm.email,
+      role: editForm.role,
+      status: editForm.status,
+    };
+
+    const { data, error } = await supabase
+      .from<UserItem>('users')
+      .update(payload)
+      .eq('id', editForm.id)
+      .select('*');
+
+    if (error) {
+      console.error('Falha ao atualizar usuário:', error.message);
+    } else if (data && data.length > 0) {
+      setUsers((current) => current.map((item) => (item.id === editForm.id ? data[0] : item)));
+      setSelectedUser(data[0]);
+    }
+
+    setSavingUser(false);
+  };
+
+  const handleCancelEdit = () => {
+    setSelectedUser(null);
+    setEditForm({ id: '', name: '', email: '', role: 'motorista', status: 'Ativo' });
   };
 
   return (
@@ -188,9 +222,70 @@ export const UserList = () => {
         </div>
       )}
 
+      {selectedUser && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">Editar usuário</h3>
+              <p className="text-sm text-slate-500">Atualize as informações do usuário selecionado.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="text-slate-500 hover:text-slate-800 text-sm font-semibold"
+            >
+              Cancelar edição
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input
+              value={editForm.name || ''}
+              onChange={(event) => setEditForm((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Nome"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg"
+            />
+            <input
+              value={editForm.email || ''}
+              onChange={(event) => setEditForm((current) => ({ ...current, email: event.target.value }))}
+              placeholder="E-mail"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg"
+            />
+            <select
+              value={editForm.role || 'motorista'}
+              onChange={(event) => setEditForm((current) => ({ ...current, role: event.target.value }))}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg"
+            >
+              <option value="motorista">Motorista</option>
+              <option value="expedicao">Expedição</option>
+              <option value="admin">Administrador</option>
+            </select>
+            <select
+              value={editForm.status || 'Ativo'}
+              onChange={(event) => setEditForm((current) => ({ ...current, status: event.target.value as UserItem['status'] }))}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg"
+            >
+              <option value="Ativo">Ativo</option>
+              <option value="Em Entrega">Em Entrega</option>
+              <option value="Bloqueado">Bloqueado</option>
+            </select>
+          </div>
+          <button
+            onClick={handleSaveEdit}
+            disabled={savingUser}
+            className="bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-60"
+          >
+            {savingUser ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {filteredUsers.map((u) => (
-          <div key={u.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <div
+            key={u.id}
+            onClick={() => handleEdit(u.id)}
+            className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 cursor-pointer hover:border-blue-200 hover:shadow-lg transition-all"
+          >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 border border-slate-200 uppercase font-bold text-xl">
                 {u.name.charAt(0)}
@@ -210,13 +305,19 @@ export const UserList = () => {
             </div>
             <div className="flex gap-2 pt-2">
               <button
-                onClick={() => handleEdit(u.id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleEdit(u.id);
+                }}
                 className="flex-1 py-1.5 bg-slate-50 text-slate-600 rounded text-xs font-bold hover:bg-slate-100"
               >
                 Editar
               </button>
               <button
-                onClick={() => toggleBlock(u.id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleBlock(u.id);
+                }}
                 className="flex-1 py-1.5 bg-red-50 text-red-600 rounded text-xs font-bold hover:bg-red-100"
               >
                 {u.status === 'Bloqueado' ? 'Desbloquear' : 'Bloquear'}

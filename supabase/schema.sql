@@ -160,7 +160,7 @@ create table if not exists delivery_photos (
 
 create table if not exists warranties (
   id uuid primary key default uuid_generate_v4(),
-  expedition_id uuid references expeditions(id) on delete cascade,
+  expedition_id uuid references expeditions(id) on delete set null,
   delivery_id uuid references deliveries(id) on delete cascade,
   customer_id uuid references customers(id) on delete set null,
   start_date date not null,

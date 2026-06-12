@@ -23,7 +23,7 @@ export const FeedbackList = () => {
   useEffect(() => {
     const loadFeedbacks = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from<Feedback>('feedbacks').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('feedbacks').select('*').order('created_at', { ascending: false });
       if (error) {
         console.error('Falha ao carregar feedbacks reais:', error.message);
       } else if (data) {

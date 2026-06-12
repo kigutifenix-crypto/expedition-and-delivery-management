@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Edit, ArrowRight } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -48,21 +48,6 @@ export const CustomerList = () => {
     setMode('create');
   };
 
-  const handleEdit = (customer: Customer) => {
-    setSelected(customer);
-    setForm(customer);
-    setMode('edit');
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Deseja remover este cliente?')) return;
-    const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) {
-      console.error(error.message);
-      return;
-    }
-    loadCustomers();
-  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,37 +97,44 @@ export const CustomerList = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="font-bold text-slate-800">Lista de Clientes</h3>
-            <span className="text-xs font-semibold text-slate-500">{loading ? 'Carregando...' : `${customers.length} clientes`}</span>
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-slate-800">Lista de Clientes</h3>
+              <p className="text-sm text-slate-500">{loading ? 'Carregando...' : `${customers.length} clientes cadastrados`}</p>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50">
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Nome</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Documento</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Contato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {customers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-slate-700">{customer.name}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{customer.document || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{customer.phone || customer.email || '—'}</td>
-                    <td className="px-4 py-3 text-right space-x-2">
-                      <button onClick={() => navigate(`/clientes/${customer.id}`)} className="px-3 py-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200">Ver</button>
-                      <button onClick={() => handleEdit(customer)} className="px-3 py-2 bg-amber-100 rounded-lg text-amber-700 hover:bg-amber-200">Editar</button>
-                      <button onClick={() => handleDelete(customer.id)} className="px-3 py-2 bg-rose-100 rounded-lg text-rose-700 hover:bg-rose-200">Excluir</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+          {customers.length === 0 && !loading ? (
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+              Nenhum cliente encontrado.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {customers.map((customer) => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => navigate(`/clientes/${customer.id}`)}
+                  className="w-full text-left rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-lg font-semibold text-slate-900 truncate">{customer.name}</p>
+                      <p className="mt-1 text-sm text-slate-500 truncate">{customer.email || 'E-mail não informado'}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{customer.document || 'Sem documento'}</span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{customer.phone || 'Sem telefone'}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-sm text-slate-600">
+                    <span className="font-semibold text-slate-700">Endereço:</span> {customer.address || 'Não informado'}{customer.city ? ` • ${customer.city}` : ''}{customer.state ? `/${customer.state}` : ''}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">

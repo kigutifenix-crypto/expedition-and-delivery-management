@@ -10,6 +10,7 @@ import { NewExpedition } from './pages/Expeditions/NewExpedition';
 import { DeliveryList } from './pages/Deliveries/DeliveryList';
 import { DeliveryDetail } from './pages/Deliveries/DeliveryDetail';
 import { WarrantyList } from './pages/Warranties/WarrantyList';
+import { WarrantyDetail } from './pages/Warranties/WarrantyDetail';
 import { FeedbackList } from './pages/Feedbacks/FeedbackList';
 import { Reports } from './pages/Reports/Reports';
 import { Login } from './pages/Login';
@@ -110,6 +111,10 @@ function App() {
         <Route
           path="/garantias"
           element={session ? <Layout><WarrantyList /></Layout> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/garantias/:id"
+          element={session ? <Layout><WarrantyDetail /></Layout> : <Navigate to="/login" replace />}
         />
         <Route
           path="/relatorios"

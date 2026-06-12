@@ -65,8 +65,8 @@ export const Dashboard = () => {
       setLoading(true);
       try {
         const [deliveriesResult, expeditionsResult, feedbacksResult, warrantiesResult] = await Promise.all([
-          supabase.from<DeliveryRow>('deliveries').select('id,status,created_at,order_number,nf_number'),
-          supabase.from<ExpeditionRow>('expeditions').select('id,client_name,order_number,nf_number,status,date').order('date', { ascending: false }).limit(4),
+          supabase.from('deliveries').select('id,status,created_at,order_number,nf_number'),
+          supabase.from('expeditions').select('id,client_name,order_number,nf_number,status,date').order('date', { ascending: false }).limit(4),
           supabase.from<{ rating: number }>('feedbacks').select('rating'),
           supabase.from('vw_warranties').select('id,status'),
         ]);
@@ -141,6 +141,15 @@ export const Dashboard = () => {
 
   const statusTotal = useMemo(() => statusData.reduce((sum, item) => sum + item.value, 0), [statusData]);
 
+  const statRoutes: Record<string, string> = {
+    'Expedições em andamento': '/expedicoes',
+    'Entregas concluídas': '/entregas',
+    'Entregas pendentes': '/entregas',
+    'Garantias ativas': '/garantias',
+    'Feedback médio': '/feedbacks',
+    'Feedbacks registrados': '/feedbacks',
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -160,17 +169,25 @@ export const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3">
-            <div className={`w-10 h-10 ${stat.bg} ${stat.color} rounded-lg flex items-center justify-center`}>
-              <stat.icon size={24} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-500 leading-tight">{stat.label}</p>
-              <h3 className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</h3>
-            </div>
-          </div>
-        ))}
+        {stats.map((stat, idx) => {
+          const route = statRoutes[stat.label];
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => route && navigate(route)}
+              className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-3 text-left transition duration-200 ease-out hover:border-blue-300 hover:bg-slate-50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <div className={`w-10 h-10 ${stat.bg} ${stat.color} rounded-lg flex items-center justify-center`}>
+                <stat.icon size={24} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-500 leading-tight">{stat.label}</p>
+                <h3 className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</h3>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
