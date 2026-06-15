@@ -1,7 +1,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ShieldCheck, Search, Clock, AlertTriangle, CheckCircle2, MoreVertical } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { MessageDialog } from '../../components/ui/MessageDialog';
 
 type Warranty = {
   id: string;
@@ -21,7 +24,15 @@ export const WarrantyList = () => {
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [deleteWarrantyId, setDeleteWarrantyId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [messageDialog, setMessageDialog] = useState<{ open: boolean; title?: string; message: string }>({
+    open: false,
+    title: undefined,
+    message: '',
+  });
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadWarranties = async () => {
@@ -81,13 +92,63 @@ export const WarrantyList = () => {
   };
 
   const handleDeleteWarranty = async (id: string) => {
-    if (!confirm('Deseja realmente excluir esta garantia?')) return;
-    const { error } = await supabase.from('warranties').delete().eq('id', id);
-    if (error) {
-      console.error('Erro ao excluir garantia:', error);
-    } else {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.from('warranties').delete().eq('id', id).select('id');
+      if (error) {
+        console.error('Erro ao excluir garantia:', error);
+        setMessageDialog({
+          open: true,
+          title: 'Erro',
+          message: `Falha ao excluir garantia: ${error.message || 'verifique permissões'}`,
+        });
+        return;
+      }
+
+      // If no rows were deleted, warn the user (likely RLS blocked the operation)
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        console.warn('Nenhuma garantia deletada — verifique permissões RLS ou se a garantia existe.');
+        setMessageDialog({
+          open: true,
+          title: 'Aviso',
+          message: 'Não foi possível excluir a garantia. Você pode não ter permissão para isso.',
+        });
+        handleCloseMenu();
+        const load = async () => {
+          setLoading(true);
+          const { data: refreshed, error: fetchError } = await supabase
+            .from('vw_warranties')
+            .select('id, customer_name, expedition_client_name, order_number, nf_number, start_date, end_date, status')
+            .order('end_date', { ascending: true });
+          if (!fetchError && refreshed) setWarranties(refreshed.map((item: any) => ({
+            id: item.id,
+            customer_name: item.customer_name || item.expedition_client_name || null,
+            expedition_client_name: item.expedition_client_name ?? null,
+            order_number: item.order_number,
+            nf_number: item.nf_number,
+            start_date: item.start_date,
+            end_date: item.end_date,
+            status: normalizeStatus(item.status),
+          })));
+          setLoading(false);
+        };
+        load();
+        return;
+      }
+
       setWarranties((prev) => prev.filter((w) => w.id !== id));
       handleCloseMenu();
+    } catch (err) {
+      console.error('Erro inesperado ao excluir garantia:', err);
+      setMessageDialog({
+        open: true,
+        title: 'Erro',
+        message: 'Erro inesperado ao excluir garantia. Veja o console para detalhes.',
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteWarrantyId(null);
     }
   };
 
@@ -285,7 +346,15 @@ export const WarrantyList = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredWarranties.map((w) => (
-                <tr key={w.id} className="hover:bg-slate-50 transition-colors">
+                <tr
+                  key={w.id}
+                  onClick={(e) => {
+                    // Não navegar se clicou no botão de ações
+                    if ((e.target as HTMLElement).closest('button')) return;
+                    navigate(`/garantias/${w.id}`);
+                  }}
+                  className="hover:bg-slate-50 transition-colors cursor-pointer"
+                >
                   <td className="px-6 py-4 text-sm text-slate-600">{w.order_number || '—'}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{w.nf_number || '—'}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{w.customer_name || '—'}</td>
@@ -351,7 +420,7 @@ export const WarrantyList = () => {
               <button
                 type="button"
                 className="w-full text-left px-4 py-3 hover:bg-slate-100 text-slate-700"
-                onClick={() => handleDeleteWarranty(openMenuId)}
+                onClick={() => setDeleteWarrantyId(openMenuId)}
               >
                 Excluir garantia
               </button>
@@ -359,6 +428,22 @@ export const WarrantyList = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(deleteWarrantyId)}
+        title="Confirmação"
+        description="Deseja realmente excluir esta garantia?"
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        isLoading={isDeleting}
+        onCancel={() => setDeleteWarrantyId(null)}
+        onConfirm={() => handleDeleteWarranty(deleteWarrantyId || '')}
+      />
+      <MessageDialog
+        open={messageDialog.open}
+        title={messageDialog.title}
+        message={messageDialog.message}
+        onClose={() => setMessageDialog({ open: false, title: undefined, message: '' })}
+      />
     </div>
   );
 };
