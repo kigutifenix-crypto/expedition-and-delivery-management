@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { MessageDialog } from '../../components/ui/MessageDialog';
 
 type Expedition = {
   id: string;
@@ -32,8 +34,6 @@ type Expedition = {
 const statusStyles: Record<string, string> = {
   pendente: 'bg-slate-100 text-slate-700 border-slate-200',
   em_transito: 'bg-amber-100 text-amber-700 border-amber-200',
-  entregue: 'bg-blue-100 text-blue-700 border-blue-200',
-  finalizado: 'bg-green-100 text-green-700 border-green-200',
   concluido: 'bg-green-100 text-green-700 border-green-200',
   cancelado: 'bg-rose-100 text-rose-700 border-rose-200',
 };
@@ -41,8 +41,6 @@ const statusStyles: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   pendente: 'Pendente',
   em_transito: 'Em Trânsito',
-  entregue: 'Entregue',
-  finalizado: 'Finalizado',
   concluido: 'Concluído',
   cancelado: 'Cancelado',
 };
@@ -50,15 +48,12 @@ const statusLabels: Record<string, string> = {
 const statusProgress: Record<string, number> = {
   pendente: 20,
   em_transito: 50,
-  entregue: 75,
-  finalizado: 100,
   concluido: 100,
   cancelado: 0,
 };
 
 const getProgressColor = (progress: number) => {
   if (progress >= 100) return 'bg-emerald-500';
-  if (progress >= 75) return 'bg-blue-500';
   if (progress >= 50) return 'bg-amber-500';
   if (progress > 0) return 'bg-sky-500';
   return 'bg-rose-500';
@@ -67,7 +62,6 @@ const getProgressColor = (progress: number) => {
 const statusIcons: Record<string, any> = {
   pendente: Clock,
   em_transito: Truck,
-  entregue: CheckCircle,
   concluido: CheckCircle,
 };
 
@@ -81,6 +75,13 @@ export const ExpeditionList = () => {
   const [error, setError] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [messageDialog, setMessageDialog] = useState<{ open: boolean; title?: string; message: string }>({
+    open: false,
+    title: undefined,
+    message: '',
+  });
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const pageSize = 4;
@@ -92,7 +93,7 @@ export const ExpeditionList = () => {
       const { data, error } = await supabase
         .from<Expedition>('expeditions')
         .select('id,date,nf_number,order_number,client_name,status,carrier,freight_type')
-        .order('date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Erro ao carregar expedições:', error);
@@ -142,24 +143,53 @@ export const ExpeditionList = () => {
       .join('\n');
 
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(content).then(() => {
-        alert('Dados das expedições copiados para a área de transferência.');
-      });
+      navigator.clipboard.writeText(content)
+        .then(() => {
+          setMessageDialog({
+            open: true,
+            title: 'Sucesso',
+            message: 'Dados das expedições copiados para a área de transferência.',
+          });
+        })
+        .catch(() => {
+          setMessageDialog({
+            open: true,
+            title: 'Copiar manualmente',
+            message: `Copie manualmente:\n${content}`,
+          });
+        });
     } else {
-      alert('Copie manualmente:\n' + content);
+      setMessageDialog({
+        open: true,
+        title: 'Copiar manualmente',
+        message: `Copie manualmente:\n${content}`,
+      });
     }
   };
 
-  const handleDeleteExpedition = async (id: string) => {
-    if (!confirm('Tem certeza que deseja deletar esta expedição?')) return;
-    
-    const { error } = await supabase.from('expeditions').delete().eq('id', id);
+  const handleDeleteExpedition = (id: string) => {
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDeleteExpedition = async () => {
+    if (!confirmDeleteId) return;
+    setIsDeleting(true);
+
+    const { error } = await supabase.from('expeditions').delete().eq('id', confirmDeleteId);
     if (error) {
       console.error('Erro ao deletar:', error);
+      setMessageDialog({
+        open: true,
+        title: 'Erro',
+        message: 'Falha ao deletar expedição. Veja o console para mais detalhes.',
+      });
     } else {
-      setExpeditions((prev) => prev.filter((e) => e.id !== id));
+      setExpeditions((prev) => prev.filter((e) => e.id !== confirmDeleteId));
       setOpenMenuId(null);
     }
+
+    setIsDeleting(false);
+    setConfirmDeleteId(null);
   };
 
   const addMonths = (date: Date, months: number) => {
@@ -462,7 +492,15 @@ export const ExpeditionList = () => {
                     paginatedExpeditions.map((item) => {
                       const StatusIcon = statusIcons[item.status];
                       return (
-                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <tr
+                          key={item.id}
+                          onClick={(e) => {
+                            // Não navegar se clicou no botão de ações
+                            if ((e.target as HTMLElement).closest('button')) return;
+                            navigate(`/expedicoes/${item.id}`);
+                          }}
+                          className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                        >
                           <td className="px-6 py-4">
                             <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${statusStyles[item.status]}`}>
                               <StatusIcon size={12} />
@@ -637,6 +675,24 @@ export const ExpeditionList = () => {
             )}
           </div>
         )}
+
+        <ConfirmDialog
+          open={Boolean(confirmDeleteId)}
+          title="Confirmar exclusão"
+          description="Deseja realmente excluir esta expedição? Essa ação não pode ser desfeita."
+          confirmText="Excluir"
+          cancelText="Cancelar"
+          isLoading={isDeleting}
+          onCancel={() => setConfirmDeleteId(null)}
+          onConfirm={confirmDeleteExpedition}
+        />
+
+        <MessageDialog
+          open={messageDialog.open}
+          title={messageDialog.title}
+          message={messageDialog.message}
+          onClose={() => setMessageDialog({ open: false, title: undefined, message: '' })}
+        />
       </div>
     </div>
   );
