@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Clock, MapPin, User, Briefcase, Camera, CheckCircle2, Signature, Star, Download, FileText, QrCode, ShieldCheck, MoreVertical, Truck, XCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { MessageDialog } from '../../components/ui/MessageDialog';
 interface DeliverySummary {
   id: string;
   order_number: string;
   nf_number: string;
   status: string;
+  customer_id?: string;
   customer_name?: string;
   created_at: string;
 }
@@ -55,6 +57,13 @@ export const DeliveryList = () => {
   const [error, setError] = useState<string>('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [deleteDeliveryId, setDeleteDeliveryId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [messageDialog, setMessageDialog] = useState<{ open: boolean; title?: string; message: string }>({
+    open: false,
+    title: undefined,
+    message: '',
+  });
   const menuRef = useRef<HTMLDivElement>(null);
 
   const loadDeliveries = async () => {
@@ -63,7 +72,7 @@ export const DeliveryList = () => {
 
     const { data, error: fetchError } = await supabase
       .from<DeliverySummary>('vw_deliveries')
-      .select('id, order_number, nf_number, status, customer_name, created_at')
+      .select('id, order_number, nf_number, status, customer_id, customer_name, created_at')
       .order('created_at', { ascending: false });
 
     if (fetchError) {
@@ -156,15 +165,29 @@ export const DeliveryList = () => {
     setLoading(false);
   };
 
-  const handleDeleteDelivery = async (id: string) => {
-    if (!confirm('Deseja realmente excluir esta entrega?')) return;
-    const { error } = await supabase.from('deliveries').delete().eq('id', id);
+  const handleDeleteDelivery = (id: string) => {
+    setDeleteDeliveryId(id);
+  };
+
+  const confirmDeleteDelivery = async () => {
+    if (!deleteDeliveryId) return;
+    setIsDeleting(true);
+
+    const { error } = await supabase.from('deliveries').delete().eq('id', deleteDeliveryId);
     if (error) {
       console.error('Erro ao excluir entrega:', error.message);
+      setMessageDialog({
+        open: true,
+        title: 'Erro',
+        message: 'Falha ao excluir entrega. Veja o console para mais detalhes.',
+      });
     } else {
-      setDeliveries((prev) => prev.filter((delivery) => delivery.id !== id));
+      setDeliveries((prev) => prev.filter((delivery) => delivery.id !== deleteDeliveryId));
       handleCloseMenu();
     }
+
+    setIsDeleting(false);
+    setDeleteDeliveryId(null);
   };
 
   useEffect(() => {
@@ -231,10 +254,18 @@ export const DeliveryList = () => {
                   deliveries.map((delivery) => {
                     const StatusIcon = statusIcons[delivery.status] || Star;
                     return (
-                      <tr key={delivery.id} className="hover:bg-slate-50 transition-colors">
+                      <tr
+                        key={delivery.id}
+                        onClick={(e) => {
+                          // Não navegar se clicou no botão de ações
+                          if ((e.target as HTMLElement).closest('button')) return;
+                          navigate(`/entregas/${delivery.id}`);
+                        }}
+                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
                         <td className="px-4 py-4 text-sm text-slate-700 font-semibold">{delivery.order_number}</td>
                         <td className="px-4 py-4 text-sm text-slate-700">{delivery.nf_number}</td>
-                        <td className="px-4 py-4 text-sm text-slate-700">{delivery.customer_name || '—'}</td>
+                        <td className="px-4 py-4 text-sm text-slate-700">{delivery.customer_name || delivery.customer_id || '—'}</td>
                         <td className="px-4 py-4">
                           <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold ${statusStyles[delivery.status] ?? 'bg-slate-100 text-slate-700 border-slate-200'}`}>
                             <StatusIcon size={14} />
@@ -304,6 +335,22 @@ export const DeliveryList = () => {
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(deleteDeliveryId)}
+        title="Confirmação"
+        description="Deseja realmente excluir esta entrega?"
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        isLoading={isDeleting}
+        onCancel={() => setDeleteDeliveryId(null)}
+        onConfirm={confirmDeleteDelivery}
+      />
+      <MessageDialog
+        open={messageDialog.open}
+        title={messageDialog.title}
+        message={messageDialog.message}
+        onClose={() => setMessageDialog({ open: false, title: undefined, message: '' })}
+      />
     </div>
   );
 };

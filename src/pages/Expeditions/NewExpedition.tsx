@@ -66,6 +66,7 @@ type ExpeditionForm = {
   responsible: string;
   notes: string;
   driver_id: string;
+  status: 'pendente' | 'em_transito' | 'concluido' | 'cancelado';
 };
 
 type ExpeditionPhoto = {
@@ -98,6 +99,7 @@ export const NewExpedition = () => {
     responsible: '',
     notes: '',
     driver_id: '',
+    status: 'em_transito',
   });
 
   const [products, setProducts] = useState<Product[]>([
@@ -157,17 +159,23 @@ export const NewExpedition = () => {
         return;
       }
 
-      setForm({
-        date: data.date ? new Date(data.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-        nf: data.nf_number,
-        order: data.order_number,
-        client: data.client_name,
-        address: data.address,
-        carrier: data.carrier,
-        freight: data.freight_type as ExpeditionForm['freight'],
-        responsible: data.responsible || '',
-        notes: data.observations || '',
-        driver_id: data.responsible_user_id || '',
+const normalizeStatus = (inputStatus: string) => {
+          if (inputStatus === 'entregue' || inputStatus === 'finalizado') return 'concluido';
+          return inputStatus as ExpeditionForm['status'];
+        };
+
+        setForm({
+          date: data.date ? new Date(data.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+          nf: data.nf_number,
+          order: data.order_number,
+          client: data.client_name,
+          address: data.address,
+          carrier: data.carrier,
+          freight: data.freight_type as ExpeditionForm['freight'],
+          responsible: data.responsible || '',
+          notes: data.observations || '',
+          driver_id: data.responsible_user_id || '',
+          status: normalizeStatus(data.status),
       });
 
       setProducts(Array.isArray(data.products) && data.products.length > 0 ? data.products : [{ id: '1', sku: '', name: '', qty: 1, serial: '' }]);
@@ -240,6 +248,23 @@ export const NewExpedition = () => {
 
   const handleInputChange = (field: keyof ExpeditionForm, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const findCustomerIdByName = async (clientName: string) => {
+    const search = clientName.trim();
+    if (!search) return null;
+
+    const { data: matchedCustomers, error: matchError } = await supabase
+      .from('customers')
+      .select('id')
+      .or(`name.ilike.%${search}%,company_name.ilike.%${search}%`)
+      .limit(1);
+
+    if (matchError || !matchedCustomers || matchedCustomers.length === 0) {
+      return null;
+    }
+
+    return matchedCustomers[0].id;
   };
 
   const handlePhotoTypeSelect = (type: string) => {
@@ -319,6 +344,11 @@ export const NewExpedition = () => {
 
     const dateValue = form.date ? new Date(form.date).toISOString() : new Date().toISOString();
 
+    const normalizeStatus = (inputStatus: string) => {
+      if (inputStatus === 'entregue' || inputStatus === 'finalizado') return 'concluido';
+      return inputStatus as ExpeditionForm['status'];
+    };
+
     const payload = {
       order_number: form.order,
       nf_number: form.nf,
@@ -328,7 +358,7 @@ export const NewExpedition = () => {
       freight_type: form.freight,
       responsible: form.responsible || null,
       observations: form.notes || null,
-      status: 'em_transito',
+      status: normalizeStatus(form.status),
       date: dateValue,
       responsible_user_id: form.driver_id || null,
       products: products.map(({ id, sku, name, qty, serial }) => ({ id, sku, name, qty, serial })),
@@ -345,10 +375,16 @@ export const NewExpedition = () => {
 
     let expeditionId = id;
 
+    const customerId = await findCustomerIdByName(payload.client_name);
+    const expeditionPayload = {
+      ...payload,
+      customer_id: customerId,
+    };
+
     if (isEditing) {
       const { error } = await supabase
         .from('expeditions')
-        .update(payload)
+        .update(expeditionPayload)
         .eq('id', id)
         .select('id')
         .single();
@@ -362,7 +398,7 @@ export const NewExpedition = () => {
     } else {
       const { data: expeditionData, error } = await supabase
         .from('expeditions')
-        .insert([payload])
+        .insert([expeditionPayload])
         .select('id')
         .single();
 
@@ -377,13 +413,15 @@ export const NewExpedition = () => {
 
       // Criar registro de entrega associado à expedição recém-criada
       try {
+        const customerId = await findCustomerIdByName(payload.client_name);
+
         const deliveryPayload = {
           expedition_id: expeditionData.id,
           order_number: payload.order_number,
           nf_number: payload.nf_number,
           status: payload.status || 'em_transito',
           driver_user_id: payload.responsible_user_id || null,
-          customer_id: null,
+          customer_id: customerId,
         };
 
         const { data: deliveryData, error: deliveryError } = await supabase
@@ -885,10 +923,17 @@ export const NewExpedition = () => {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Resumo de Status</label>
-                  <div className="rounded-3xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600">
-                    A expedição será criada como <span className="font-semibold text-blue-600">em_transito</span> e preparada para o motorista.
-                  </div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Status da Expedição</label>
+                  <select
+                    value={form.status}
+                    onChange={(event) => handleInputChange('status', event.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="pendente">Pendente</option>
+                    <option value="em_transito">Em Trânsito</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
                 </div>
               </div>
             </section>
@@ -938,7 +983,7 @@ export const NewExpedition = () => {
             <div className="mt-6 space-y-4 text-sm text-slate-600">
               <div className="grid grid-cols-2 gap-2">
                 <span className="font-semibold text-slate-800">Status</span>
-                <span className="text-right text-blue-600">em_transito</span>
+                <span className="text-right text-blue-600">{form.status.replaceAll('_', ' ')}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <span className="font-semibold text-slate-800">Motorista</span>

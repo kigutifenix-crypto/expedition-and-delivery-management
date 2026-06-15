@@ -1,0 +1,4 @@
+[project]
+ref = "ynzlczkqtlytswxobnvc"
+
+# To deploy, authenticate using `supabase login` before running `supabase functions deploy`.

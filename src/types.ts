@@ -1,5 +1,5 @@
 
-export type Status = 'pendente' | 'em_transito' | 'entregue' | 'finalizado' | 'cancelado' | 'concluido';
+export type Status = 'pendente' | 'em_transito' | 'concluido' | 'cancelado';
 
 export interface Product {
   id: string;

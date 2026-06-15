@@ -259,13 +259,17 @@ create policy "Allow insert feedbacks" on feedbacks
   for insert with check (auth.role() is not null);
 
 -- Views used by client pages
+drop view if exists public.vw_warranties cascade;
 drop view if exists public.vw_deliveries cascade;
+
 create view public.vw_deliveries as
 select
   d.id,
+  d.expedition_id,
   d.order_number,
   d.nf_number,
   d.status,
+  d.customer_id,
   d.arrival_at,
   d.signed_at,
   d.finished_at,
@@ -280,7 +284,6 @@ left join public.customers c on c.id = d.customer_id
 left join public.expeditions e on e.id = d.expedition_id
 left join public.users u on u.id = d.driver_user_id;
 
-drop view if exists public.vw_warranties cascade;
 create view public.vw_warranties as
 select
   w.id,
@@ -294,7 +297,8 @@ select
   coalesce(c.name, dc.name, e.client_name) as customer_name,
   e.client_name as expedition_client_name,
   coalesce(d.order_number, e.order_number) as order_number,
-  coalesce(d.nf_number, e.nf_number) as nf_number
+  coalesce(d.nf_number, e.nf_number) as nf_number,
+  w.company_id
 from public.warranties w
 left join public.customers c on c.id = w.customer_id
 left join public.deliveries d on d.id = w.delivery_id

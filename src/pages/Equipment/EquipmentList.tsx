@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Dumbbell, Search, Plus, Filter } from 'lucide-react';
+import { MessageDialog } from '../../components/ui/MessageDialog';
 
 type Equipment = {
   id: string;
@@ -22,6 +23,13 @@ export const EquipmentList = () => {
   const [stockFilter, setStockFilter] = useState<'all' | 'inStock'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEquipment, setNewEquipment] = useState({ name: '', sku: '', stock: 0, price: '' });
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [messageDialogText, setMessageDialogText] = useState('');
+
+  const showMessage = (message: string) => {
+    setMessageDialogText(message);
+    setMessageDialogOpen(true);
+  };
 
   const filteredEquipment = useMemo(
     () =>
@@ -36,7 +44,7 @@ export const EquipmentList = () => {
 
   const handleAddEquipment = () => {
     if (!newEquipment.name.trim() || !newEquipment.sku.trim()) {
-      alert('Preencha nome e SKU para cadastrar o equipamento.');
+      showMessage('Preencha nome e SKU para cadastrar o equipamento.');
       return;
     }
     setEquipment((current) => [
@@ -139,6 +147,12 @@ export const EquipmentList = () => {
           </tbody>
         </table>
       </div>
+      <MessageDialog
+        open={messageDialogOpen}
+        title="Atenção"
+        message={messageDialogText}
+        onClose={() => setMessageDialogOpen(false)}
+      />
     </div>
   );
 };

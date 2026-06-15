@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Star, Search, MessageSquare, ThumbsUp, Quote, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { PromptDialog } from '../../components/ui/PromptDialog';
 
 type Feedback = {
   id: string;
@@ -19,6 +20,7 @@ export const FeedbackList = () => {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
+  const [replyFeedbackId, setReplyFeedbackId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadFeedbacks = async () => {
@@ -56,11 +58,19 @@ export const FeedbackList = () => {
   };
 
   const handleReply = (id: string) => {
-    const response = window.prompt('Escreva uma resposta para o cliente:');
-    if (!response) return;
+    setReplyFeedbackId(id);
+  };
+
+  const handleSubmitReply = (response: string) => {
+    if (!replyFeedbackId || !response.trim()) {
+      setReplyFeedbackId(null);
+      return;
+    }
+
     setFeedbacks((current) =>
-      current.map((item) => (item.id === id ? { ...item, response } : item))
+      current.map((item) => (item.id === replyFeedbackId ? { ...item, response } : item))
     );
+    setReplyFeedbackId(null);
   };
 
   return (
@@ -240,6 +250,17 @@ export const FeedbackList = () => {
           </div>
         </div>
       )}
+      <PromptDialog
+        open={replyFeedbackId !== null}
+        title="Responder feedback"
+        description="Escreva uma resposta para o cliente:"
+        label="Resposta"
+        placeholder="Digite sua resposta aqui..."
+        confirmText="Enviar"
+        cancelText="Cancelar"
+        onCancel={() => setReplyFeedbackId(null)}
+        onSubmit={handleSubmitReply}
+      />
     </div>
   );
 };

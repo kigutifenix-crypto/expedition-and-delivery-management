@@ -41,17 +41,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         
         if (session?.user?.email) {
           // Fetch user data from users table
-          const { data, error } = await supabase
+          const { data, error, status } = await supabase
             .from('users')
             .select('name, role')
             .eq('email', session.user.email)
-            .single();
+            .maybeSingle();
 
-          if (data && !error) {
+          if (error && status !== 406) {
+            console.error('Erro ao buscar dados do usuário:', error.message);
+            setUserName(session.user.email.split('@')[0]);
+          } else if (data) {
             setUserName(data.name || 'Usuário');
             setUserRole(data.role || '');
           } else {
-            // Fallback: use email as name if not found in users table
             setUserName(session.user.email.split('@')[0]);
           }
         }

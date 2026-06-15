@@ -1,0 +1,1 @@
+const https = require('https'); const url = 'https://photon.komoot.io/api/?q=rua%20vastec%2010&lang=pt&limit=20'; https.get(url, res => { console.log('statusCode', res.statusCode); let d=''; res.on('data', c => d += c); res.on('end', () => console.log('body', d.slice(0,200))); }).on('error', e => console.error(e));

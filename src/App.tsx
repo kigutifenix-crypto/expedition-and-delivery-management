@@ -18,6 +18,7 @@ import { UserList } from './pages/Users/UserList';
 import { CustomerList } from './pages/Customers/CustomerList';
 import { CustomerDetail } from './pages/Customers/CustomerDetail';
 import { Settings } from './pages/Settings';
+import { DebugDeliveries } from './pages/Debug/DebugDeliveries';
 
 const Placeholder = ({ title, icon: Icon }: { title: string, icon: any }) => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400 space-y-4">
@@ -127,6 +128,10 @@ function App() {
         <Route
           path="/configuracoes"
           element={session ? <Layout><Settings /></Layout> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/debug/entregas"
+          element={session ? <Layout><DebugDeliveries /></Layout> : <Navigate to="/login" replace />}
         />
         <Route path="*" element={<Navigate to={session ? "/" : "/login"} replace />} />
       </Routes>

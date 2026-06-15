@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
@@ -15,6 +15,8 @@ import {
   LogOut
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { supabase } from '../lib/supabase';
+import { MessageDialog } from './ui/MessageDialog';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -29,6 +31,29 @@ const menuItems = [
 ];
 
 export const Sidebar = () => {
+  const navigate = useNavigate();
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [messageDialogText, setMessageDialogText] = useState('');
+
+  const showErrorMessage = (message: string) => {
+    setMessageDialogText(message);
+    setMessageDialogOpen(true);
+  };
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Erro ao deslogar:', error);
+        showErrorMessage('Falha ao sair do sistema. Veja o console para mais detalhes.');
+        return;
+      }
+      navigate('/login');
+    } catch (err) {
+      console.error('Erro inesperado ao deslogar:', err);
+      showErrorMessage('Erro inesperado ao sair do sistema.');
+    }
+  };
   return (
     <aside className="w-64 bg-white border-r border-slate-200 h-screen sticky top-0 hidden lg:flex flex-col">
       <div className="p-6 border-b border-slate-100 flex items-center gap-3">
@@ -63,11 +88,21 @@ export const Sidebar = () => {
       </nav>
 
       <div className="p-4 border-t border-slate-100">
-        <button className="flex items-center gap-3 px-4 py-3 w-full text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-3 w-full text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+        >
           <LogOut className="w-5 h-5" />
           <span className="text-sm font-medium">Sair do Sistema</span>
         </button>
       </div>
+      <MessageDialog
+        open={messageDialogOpen}
+        title="Atenção"
+        message={messageDialogText}
+        onClose={() => setMessageDialogOpen(false)}
+      />
     </aside>
   );
 };

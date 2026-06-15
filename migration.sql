@@ -600,17 +600,22 @@ left join public.feedbacks f on f.delivery_id = d.id
 left join public.qr_codes q on q.delivery_id = d.id
 left join public.occurrences o on o.delivery_id = d.id;
 
-create or replace view public.vw_deliveries as
+drop view if exists public.vw_warranties cascade;
+drop view if exists public.vw_deliveries cascade;
+
+create view public.vw_deliveries as
 select
   d.id,
+  d.expedition_id,
   d.order_number,
   d.nf_number,
   d.status,
+  d.customer_id,
   d.arrival_at,
   d.signed_at,
   d.finished_at,
   d.created_at,
-  c.name as customer_name,
+  coalesce(c.name, e.client_name) as customer_name,
   c.document as customer_document,
   e.client_name as expedition_client_name,
   u.name as driver_name,
@@ -620,7 +625,6 @@ left join public.customers c on c.id = d.customer_id
 left join public.expeditions e on e.id = d.expedition_id
 left join public.users u on u.id = d.driver_user_id;
 
-drop view if exists public.vw_warranties cascade;
 create view public.vw_warranties as
 select
   w.id,

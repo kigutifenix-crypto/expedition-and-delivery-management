@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { User, Shield, Plus, Mail } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { MessageDialog } from '../../components/ui/MessageDialog';
 
 type UserItem = {
   id: string;
@@ -20,6 +21,11 @@ export const UserList = () => {
   const [editForm, setEditForm] = useState<Partial<UserItem>>({ id: '', name: '', email: '', role: 'motorista', status: 'Ativo' });
   const [loading, setLoading] = useState(true);
   const [savingUser, setSavingUser] = useState(false);
+  const [messageDialog, setMessageDialog] = useState<{ open: boolean; title?: string; message: string }>({
+    open: false,
+    title: undefined,
+    message: '',
+  });
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -46,7 +52,7 @@ export const UserList = () => {
 
   const handleAddUser = async () => {
     if (!newUser.name.trim() || !newUser.email.trim() || !newUser.password.trim()) {
-      alert('Informe nome, e-mail e senha para cadastrar o usuário.');
+      setMessageDialog({ open: true, title: 'Atenção', message: 'Informe nome, e-mail e senha para cadastrar o usuário.' });
       return;
     }
 
@@ -59,7 +65,7 @@ export const UserList = () => {
 
     if (authError) {
       console.error('Erro ao criar conta de autenticação:', authError.message);
-      alert('Não foi possível criar a conta de autenticação. Verifique o e-mail e tente novamente.');
+      setMessageDialog({ open: true, title: 'Erro', message: 'Não foi possível criar a conta de autenticação. Verifique o e-mail e tente novamente.' });
       setSavingUser(false);
       return;
     }
@@ -80,7 +86,7 @@ export const UserList = () => {
 
     if (error) {
       console.error('Erro ao criar usuário:', error.message);
-      alert('Não foi possível salvar o usuário no cadastro.');
+      setMessageDialog({ open: true, title: 'Erro', message: 'Não foi possível salvar o usuário no cadastro.' });
       setSavingUser(false);
       return;
     }
@@ -326,6 +332,12 @@ export const UserList = () => {
           </div>
         ))}
       </div>
+      <MessageDialog
+        open={messageDialog.open}
+        title={messageDialog.title}
+        message={messageDialog.message}
+        onClose={() => setMessageDialog({ open: false, title: undefined, message: '' })}
+      />
     </div>
   );
 };

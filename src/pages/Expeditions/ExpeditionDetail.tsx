@@ -36,8 +36,6 @@ type ExpeditionDeliverySignature = {
 const statusStyles: Record<string, string> = {
   pendente: 'bg-slate-100 text-slate-700 border-slate-200',
   em_transito: 'bg-amber-100 text-amber-700 border-amber-200',
-  entregue: 'bg-blue-100 text-blue-700 border-blue-200',
-  finalizado: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   concluido: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   cancelado: 'bg-rose-100 text-rose-700 border-rose-200',
 };
@@ -45,8 +43,6 @@ const statusStyles: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   pendente: 'Pendente',
   em_transito: 'Em Trânsito',
-  entregue: 'Entregue',
-  finalizado: 'Finalizado',
   concluido: 'Concluído',
   cancelado: 'Cancelado',
 };
@@ -54,8 +50,6 @@ const statusLabels: Record<string, string> = {
 const statusProgress: Record<string, number> = {
   pendente: 20,
   em_transito: 50,
-  entregue: 75,
-  finalizado: 100,
   concluido: 100,
   cancelado: 0,
 };
