@@ -143,7 +143,7 @@ export const DeliveryList = () => {
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     setLoading(true);
     if (newStatus === 'entregue') {
-      navigate(`/entregas/${id}/editar?feedback=1&status=entregue`);
+      navigate(`/entregas/${id}/editar?status=entregue`);
       handleCloseMenu();
       setLoading(false);
       return;

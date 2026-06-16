@@ -55,7 +55,7 @@ export const Sidebar = () => {
     }
   };
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 h-screen sticky top-0 hidden lg:flex flex-col">
+    <aside className="w-64 bg-slate-100 border-r border-slate-300 h-screen sticky top-0 hidden lg:flex flex-col">
       <div className="p-6 border-b border-slate-100 flex items-center gap-3">
         <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
           <Dumbbell className="text-white w-6 h-6" />
@@ -74,8 +74,8 @@ export const Sidebar = () => {
             className={({ isActive }) => clsx(
               "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group",
               isActive 
-                ? "bg-blue-50 text-blue-700 font-semibold" 
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-blue-100 text-blue-800 font-semibold" 
+                : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
             )}
           >
             <item.icon className={clsx(

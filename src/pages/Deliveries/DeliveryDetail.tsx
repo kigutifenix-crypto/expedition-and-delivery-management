@@ -155,7 +155,8 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
     const statusParam = searchParams.get('status');
     const feedbackParam = searchParams.get('feedback');
 
-    if (feedbackParam === '1' && (statusParam === 'entregue' || statusParam === 'finalizado')) {
+    // Only open feedback modal when flow explicitly requests it for "finalizado".
+    if (feedbackParam === '1' && statusParam === 'finalizado') {
       setPendingStatus(statusParam);
       setShowFeedbackModal(true);
       setSearchParams({});
@@ -706,9 +707,9 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
         </aside>
       </div>
       {showFeedbackModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-8">
-          <div className="w-full max-w-3xl rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/60">
-            <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
+          <div className="w-full max-w-3xl max-h-[90vh] rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200/60 overflow-auto">
+            <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Feedback</p>
                 <h3 className="mt-2 text-2xl font-semibold text-slate-900">Avaliação da entrega</h3>
