@@ -138,33 +138,33 @@ export const ExpeditionList = () => {
   const paginatedExpeditions = filteredExpeditions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleExport = () => {
+    const headers = ['NF', 'Pedido', 'Cliente', 'Status', 'Transportadora', 'Tipo de Carga'];
+    const headerRow = headers.join(';');
+    
     const content = filteredExpeditions
       .map((item) => `${item.nf_number};${item.order_number};${item.client_name};${statusLabels[item.status]};${item.carrier};${item.freight_type}`)
       .join('\n');
 
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(content)
-        .then(() => {
-          setMessageDialog({
-            open: true,
-            title: 'Sucesso',
-            message: 'Dados das expedições copiados para a área de transferência.',
-          });
-        })
-        .catch(() => {
-          setMessageDialog({
-            open: true,
-            title: 'Copiar manualmente',
-            message: `Copie manualmente:\n${content}`,
-          });
-        });
-    } else {
-      setMessageDialog({
-        open: true,
-        title: 'Copiar manualmente',
-        message: `Copie manualmente:\n${content}`,
-      });
-    }
+    const csv = `${headerRow}\n${content}`;
+    
+    // Create blob and download as file
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `expedicoes_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setMessageDialog({
+      open: true,
+      title: 'Sucesso',
+      message: `Arquivo com ${filteredExpeditions.length} expedições baixado com sucesso.`,
+    });
   };
 
   const handleDeleteExpedition = (id: string) => {
@@ -652,6 +652,7 @@ export const ExpeditionList = () => {
 
                 <button
                   onClick={() => {
+                    handleExport();
                     setOpenMenuId(null);
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-colors"
