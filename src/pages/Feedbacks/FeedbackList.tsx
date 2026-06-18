@@ -8,6 +8,13 @@ type Feedback = {
   delivery_id: string;
   expedition_id?: string;
   customer_id: string | null;
+  client_name?: string | null;
+  expedition_order_number?: string | null;
+  delivery_order_number?: string | null;
+  delivery_rating?: number | null;
+  installation_rating?: number | null;
+  service_rating?: number | null;
+  equipment_rating?: number | null;
   rating: number | null;
   comment: string | null;
   response?: string;
@@ -25,11 +32,37 @@ export const FeedbackList = () => {
   useEffect(() => {
     const loadFeedbacks = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('feedbacks').select('*').order('created_at', { ascending: false });
+      // Buscar feedbacks já com relações para evitar múltiplas chamadas por item
+      const { data, error } = await supabase
+        .from('feedbacks')
+        .select('*, customers(name), deliveries(order_number), expeditions(order_number, client_name)')
+        .order('created_at', { ascending: false });
+
       if (error) {
         console.error('Falha ao carregar feedbacks reais:', error.message);
       } else if (data) {
-        setFeedbacks(data);
+        // Mapear campos relacionados para uso na UI
+        const mapped = (data as any[]).map((f) => ({
+          id: f.id,
+          delivery_id: f.delivery_id,
+          expedition_id: f.expedition_id,
+          customer_id: f.customer_id,
+          // Priorizar o nome registrado na expedição quando existir
+          client_name: f.expeditions?.client_name ?? f.client_name ?? f.customers?.name ?? null,
+          expedition_order_number: f.expeditions?.order_number ?? null,
+          delivery_order_number: f.deliveries?.order_number ?? null,
+          rating: f.rating ?? null,
+          delivery_rating: f.delivery_rating ?? null,
+          installation_rating: f.installation_rating ?? null,
+          service_rating: f.service_rating ?? null,
+          equipment_rating: f.equipment_rating ?? null,
+          comment: f.comment ?? null,
+          response: f.response ?? undefined,
+          liked: f.liked ?? false,
+          created_at: f.created_at,
+        })) as Feedback[];
+
+        setFeedbacks(mapped);
       }
       setLoading(false);
     };
@@ -40,7 +73,8 @@ export const FeedbackList = () => {
   const filteredFeedbacks = useMemo(
     () =>
       feedbacks.filter((item) =>
-        [item.customer_id ?? '', item.comment ?? '', item.delivery_id].some((value) => value.toLowerCase().includes(query.toLowerCase()))
+        [item.client_name ?? item.customer_id ?? '', item.comment ?? '', item.delivery_id, item.expedition_order_number ?? '', item.delivery_order_number ?? '']
+          .some((value) => value.toLowerCase().includes(query.toLowerCase()))
       ),
     [feedbacks, query]
   );
@@ -72,6 +106,15 @@ export const FeedbackList = () => {
     );
     setReplyFeedbackId(null);
   };
+
+  // fechar modal com ESC
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedFeedback(null);
+    };
+    if (selectedFeedback) document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selectedFeedback]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -126,22 +169,56 @@ export const FeedbackList = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 font-bold">
-                      {f.customer_id ? f.customer_id.charAt(0) : '—'}
+                      {f.client_name ? f.client_name.charAt(0) : '—'}
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-800">{f.customer_id || 'Cliente anônimo'}</h4>
-                      <p className="text-xs text-slate-500">Entrega #{f.delivery_id} • {new Date(f.created_at).toLocaleDateString('pt-BR')}</p>
+                      <h4 className="font-bold text-slate-800">{f.client_name || 'Cliente anônimo'}</h4>
+                      <p className="text-xs text-slate-500">Entrega #{f.expedition_order_number ?? f.delivery_order_number ?? f.delivery_id} • {new Date(f.created_at).toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>
                   <div className="flex gap-1 text-yellow-400">
                     {Array.from({ length: 5 }, (_, index) => (
-                      <Star key={index} size={14} fill={index < (f.rating ?? 0) ? 'currentColor' : 'none'} />
+                      <Star key={index} size={14} fill={index < Math.round(f.rating ?? 0) ? 'currentColor' : 'none'} />
                     ))}
                   </div>
                 </div>
                 <div className="relative">
                   <Quote size={24} className="absolute -left-2 -top-2 text-slate-100 -z-0" />
                   <p className="text-slate-600 italic text-sm relative z-10 pl-4">{f.comment || 'Sem comentário'}</p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Entrega</span>
+                    <div className="flex gap-1 text-yellow-400">
+                      {Array.from({ length: 5 }, (_, index) => (
+                        <Star key={index} size={12} fill={index < Math.round(f.delivery_rating ?? 0) ? 'currentColor' : 'none'} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Instalação</span>
+                    <div className="flex gap-1 text-yellow-400">
+                      {Array.from({ length: 5 }, (_, index) => (
+                        <Star key={index} size={12} fill={index < Math.round(f.installation_rating ?? 0) ? 'currentColor' : 'none'} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Serviço</span>
+                    <div className="flex gap-1 text-yellow-400">
+                      {Array.from({ length: 5 }, (_, index) => (
+                        <Star key={index} size={12} fill={index < Math.round(f.service_rating ?? 0) ? 'currentColor' : 'none'} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Equip.</span>
+                    <div className="flex gap-1 text-yellow-400">
+                      {Array.from({ length: 5 }, (_, index) => (
+                        <Star key={index} size={12} fill={index < Math.round(f.equipment_rating ?? 0) ? 'currentColor' : 'none'} />
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 {f.response && (
                   <div className="rounded-2xl bg-blue-50 p-4 text-sm text-slate-700 border border-blue-100">
@@ -185,40 +262,66 @@ export const FeedbackList = () => {
       </div>
 
       {selectedFeedback && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          onClick={() => setSelectedFeedback(null)}
+        >
+          <div
+            className="w-full max-w-2xl bg-white rounded-t-2xl sm:rounded-3xl border border-slate-200 shadow-2xl max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-200">
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Detalhes do Feedback</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900">Detalhes do Feedback</h3>
                 <p className="text-sm text-slate-500">Visualize todas as informações deste feedback.</p>
               </div>
               <button
                 onClick={() => setSelectedFeedback(null)}
                 className="p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors"
+                aria-label="Fechar detalhes do feedback"
               >
                 <X size={18} />
               </button>
             </div>
-            <div className="p-6 space-y-5">
+            <div className="p-4 sm:p-6 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Cliente</p>
-                  <p className="mt-2 font-semibold text-slate-800">{selectedFeedback.customer_id || 'Cliente anônimo'}</p>
+                  <p className="mt-2 font-semibold text-slate-800">{selectedFeedback.client_name || 'Cliente anônimo'}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Entrega</p>
-                  <p className="mt-2 font-semibold text-slate-800">#{selectedFeedback.delivery_id}</p>
+                  <p className="mt-2 font-semibold text-slate-800">#{selectedFeedback.expedition_order_number ?? selectedFeedback.delivery_order_number ?? selectedFeedback.delivery_id}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Expedição</p>
-                  <p className="mt-2 font-semibold text-slate-800">{selectedFeedback.expedition_id || 'Não informado'}</p>
+                  <p className="mt-2 font-semibold text-slate-800">{selectedFeedback.expedition_order_number ? `#${selectedFeedback.expedition_order_number}` : (selectedFeedback.expedition_id || 'Não informado')}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Avaliação</p>
-                  <p className="mt-2 font-semibold text-slate-800">{selectedFeedback.rating?.toFixed(1) ?? '0.0'}/5</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Avaliações</p>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Entrega', value: selectedFeedback.delivery_rating ?? selectedFeedback.rating ?? 0 },
+                      { label: 'Instalação', value: selectedFeedback.installation_rating ?? 0 },
+                      { label: 'Serviço', value: selectedFeedback.service_rating ?? 0 },
+                      { label: 'Equipamento', value: selectedFeedback.equipment_rating ?? 0 },
+                    ].map((it) => (
+                      <div key={it.label} className="flex flex-col items-start gap-2 p-3 bg-white rounded-xl border border-slate-100">
+                        <p className="text-xs text-slate-500 uppercase">{it.label}</p>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex gap-1 text-yellow-400">
+                            {Array.from({ length: 5 }, (_, index) => (
+                              <Star key={index} size={16} fill={index < Math.round(it.value) ? 'currentColor' : 'none'} />
+                            ))}
+                          </div>
+                          <div className="text-sm font-semibold text-slate-800">{Number(it.value ?? 0).toFixed(1)}/5</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

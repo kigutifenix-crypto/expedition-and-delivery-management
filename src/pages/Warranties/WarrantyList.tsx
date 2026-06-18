@@ -76,7 +76,17 @@ export const WarrantyList = () => {
   const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>, id: string) => {
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
-    setMenuPosition({ top: rect.bottom + 8, left: rect.left - 180 });
+    const menuWidth = 224; // matches w-56 ~ 14rem = 224px
+    const menuHeight = 120; // estimated height
+
+    let left = rect.left - 180;
+    left = Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8));
+
+    // Prefer opening below; if there's not enough space, open above the button
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow > menuHeight + 16 ? rect.bottom + 8 : Math.max(8, rect.top - menuHeight - 8);
+
+    setMenuPosition({ top, left });
     setOpenMenuId(id);
   };
 
@@ -396,7 +406,7 @@ export const WarrantyList = () => {
               ))}
               {filteredWarranties.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-sm text-slate-500">
+                  <td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-500">
                     Nenhuma garantia encontrada para os filtros selecionados.
                   </td>
                 </tr>

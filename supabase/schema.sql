@@ -199,6 +199,16 @@ create index if not exists idx_feedbacks_expedition_id on feedbacks (expedition_
 create index if not exists idx_feedbacks_date on feedbacks (date desc);
 create index if not exists idx_feedbacks_company_id on feedbacks (company_id);
 
+-- Notas detalhadas por categoria
+alter table feedbacks add column if not exists delivery_rating numeric(2,1) check (delivery_rating >= 0 and delivery_rating <= 5);
+alter table feedbacks add column if not exists installation_rating numeric(2,1) check (installation_rating >= 0 and installation_rating <= 5);
+alter table feedbacks add column if not exists service_rating numeric(2,1) check (service_rating >= 0 and service_rating <= 5);
+alter table feedbacks add column if not exists equipment_rating numeric(2,1) check (equipment_rating >= 0 and equipment_rating <= 5);
+create index if not exists idx_feedbacks_delivery_rating on feedbacks (delivery_rating);
+create index if not exists idx_feedbacks_installation_rating on feedbacks (installation_rating);
+create index if not exists idx_feedbacks_service_rating on feedbacks (service_rating);
+create index if not exists idx_feedbacks_equipment_rating on feedbacks (equipment_rating);
+
 -- Enable Row Level Security and policies for client access
 alter table customers enable row level security;
 alter table deliveries enable row level security;

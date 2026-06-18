@@ -1,7 +1,8 @@
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dglgtgahp';
 const CLOUDINARY_API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY || '338884337775122';
 const CLOUDINARY_API_SECRET = import.meta.env.VITE_CLOUDINARY_API_SECRET || 'd2IpM2sUVUBoHDihCtrzdhW2aCs';
-const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+const CLOUDINARY_IMAGE_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+const CLOUDINARY_VIDEO_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`;
 
 const arrayBufferToHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
@@ -30,6 +31,14 @@ export type CloudinaryUploadResult = {
 };
 
 export async function uploadImageToCloudinary(file: File, folder = 'expeditions') {
+  return uploadToCloudinary(file, folder, CLOUDINARY_IMAGE_UPLOAD_URL);
+}
+
+export async function uploadVideoToCloudinary(file: File, folder = 'expeditions') {
+  return uploadToCloudinary(file, folder, CLOUDINARY_VIDEO_UPLOAD_URL);
+}
+
+async function uploadToCloudinary(file: File, folder: string, uploadUrl: string) {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const params = { folder, timestamp };
   const signature = await signCloudinaryParams(params);
@@ -41,7 +50,7 @@ export async function uploadImageToCloudinary(file: File, folder = 'expeditions'
   formData.append('folder', folder);
   formData.append('signature', signature);
 
-  const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+  const response = await fetch(uploadUrl, {
     method: 'POST',
     body: formData,
   });

@@ -12,10 +12,11 @@ import {
   ChevronRight,
   CheckCircle,
   Truck,
+  Video,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { uploadImageToCloudinary } from '../../lib/cloudinary';
+import { uploadImageToCloudinary, uploadVideoToCloudinary } from '../../lib/cloudinary';
 
 type Product = {
   id: string;
@@ -67,6 +68,9 @@ type ExpeditionForm = {
   notes: string;
   driver_id: string;
   status: 'pendente' | 'em_transito' | 'concluido' | 'cancelado';
+  customer_contact_done: boolean;
+  customer_contact_notes: string;
+  assembly_technician: string;
 };
 
 type ExpeditionPhoto = {
@@ -75,6 +79,13 @@ type ExpeditionPhoto = {
   publicUrl: string;
   public_id: string;
   photo_type: string;
+};
+
+type ExpeditionVideo = {
+  id: string;
+  label: string;
+  publicUrl: string;
+  public_id: string;
 };
 
 export const NewExpedition = () => {
@@ -100,6 +111,9 @@ export const NewExpedition = () => {
     notes: '',
     driver_id: '',
     status: 'em_transito',
+    customer_contact_done: false,
+    customer_contact_notes: '',
+    assembly_technician: '',
   });
 
   const [products, setProducts] = useState<Product[]>([
@@ -111,9 +125,12 @@ export const NewExpedition = () => {
   ]);
 
   const [photos, setPhotos] = useState<ExpeditionPhoto[]>([]);
+  const [videos, setVideos] = useState<ExpeditionVideo[]>([]);
   const [photoTypeToUpload, setPhotoTypeToUpload] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
+  const [currentUploadType, setCurrentUploadType] = useState<'photo' | 'video'>('photo');
   const [saving, setSaving] = useState(false);
   const [stepError, setStepError] = useState('');
 
@@ -176,6 +193,9 @@ const normalizeStatus = (inputStatus: string) => {
           notes: data.observations || '',
           driver_id: data.responsible_user_id || '',
           status: normalizeStatus(data.status),
+          customer_contact_done: data.customer_contact_done || false,
+          customer_contact_notes: data.customer_contact_notes || '',
+          assembly_technician: data.assembly_technician || '',
       });
 
       setProducts(Array.isArray(data.products) && data.products.length > 0 ? data.products : [{ id: '1', sku: '', name: '', qty: 1, serial: '' }]);
@@ -202,6 +222,17 @@ const normalizeStatus = (inputStatus: string) => {
               photo_type: photo.photo_type || '',
               publicUrl: photo.public_url || '',
               public_id: photo.public_id || '',
+            }))
+          : []
+      );
+
+      setVideos(
+        Array.isArray(metadata.videos)
+          ? metadata.videos.map((video, index) => ({
+              id: video.public_id ? `existing-${video.public_id}` : `video-${index}`,
+              label: video.label || 'Vídeo',
+              publicUrl: video.public_url || '',
+              public_id: video.public_id || '',
             }))
           : []
       );
@@ -240,14 +271,19 @@ const normalizeStatus = (inputStatus: string) => {
     setVolumes((current) => current.filter((volume) => volume.id !== id));
   };
 
+  const removeVideo = (id: string) => {
+    setVideos((current) => current.filter((video) => video.id !== id));
+  };
+
   const updateVolume = (id: string, field: keyof Volume, value: string | number) => {
     setVolumes((current) =>
       current.map((volume) => (volume.id === id ? { ...volume, [field]: value } : volume))
     );
   };
 
-  const handleInputChange = (field: keyof ExpeditionForm, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }));
+  const handleInputChange = (field: keyof ExpeditionForm, value: string | boolean) => {
+    const finalValue = typeof value === 'boolean' ? value : value;
+    setForm((current) => ({ ...current, [field]: finalValue }));
   };
 
   const findCustomerIdByName = async (clientName: string) => {
@@ -269,6 +305,12 @@ const normalizeStatus = (inputStatus: string) => {
 
   const handlePhotoTypeSelect = (type: string) => {
     setPhotoTypeToUpload(type);
+    setCurrentUploadType('photo');
+    fileInputRef.current?.click();
+  };
+
+  const handleVideoUpload = () => {
+    setCurrentUploadType('video');
     fileInputRef.current?.click();
   };
 
@@ -278,38 +320,72 @@ const normalizeStatus = (inputStatus: string) => {
       return;
     }
 
-    if (photos.length >= 6) {
-      setUploadMessage('Limite de 6 fotos atingido.');
-      return;
-    }
-
-    setUploadingPhoto(true);
-    setUploadMessage('Enviando foto(s)...');
-    const selectedType = photoTypeToUpload || 'expedition';
-    const newPhotos: ExpeditionPhoto[] = [];
-
-    try {
-      for (const file of Array.from(files).slice(0, 6 - photos.length)) {
-        const uploadResult = await uploadImageToCloudinary(file, `expeditions/${new Date().toISOString().slice(0, 10)}`);
-        newPhotos.push({
-          id: crypto.randomUUID(),
-          label: selectedType,
-          photo_type: selectedType.toLowerCase().replace(/\s+/g, '_'),
-          publicUrl: uploadResult.secure_url,
-          public_id: uploadResult.public_id,
-        });
+    if (currentUploadType === 'photo') {
+      if (photos.length >= 6) {
+        setUploadMessage('Limite de 6 fotos atingido.');
+        return;
       }
 
-      setPhotos((current) => [...current, ...newPhotos]);
-      setUploadMessage(`${newPhotos.length} foto(s) enviadas com sucesso.`);
-    } catch (error: any) {
-      console.error('Falha ao enviar foto:', error);
-      setUploadMessage(error?.message || 'Falha ao enviar foto para o Cloudinary.');
-    } finally {
-      setUploadingPhoto(false);
-      setPhotoTypeToUpload('');
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      setUploadingPhoto(true);
+      setUploadMessage('Enviando foto(s)...');
+      const selectedType = photoTypeToUpload || 'expedition';
+      const newPhotos: ExpeditionPhoto[] = [];
+
+      try {
+        for (const file of Array.from(files).slice(0, 6 - photos.length)) {
+          const uploadResult = await uploadImageToCloudinary(file, `expeditions/${new Date().toISOString().slice(0, 10)}`);
+          newPhotos.push({
+            id: crypto.randomUUID(),
+            label: selectedType,
+            photo_type: selectedType.toLowerCase().replace(/\s+/g, '_'),
+            publicUrl: uploadResult.secure_url,
+            public_id: uploadResult.public_id,
+          });
+        }
+
+        setPhotos((current) => [...current, ...newPhotos]);
+        setUploadMessage(`${newPhotos.length} foto(s) enviadas com sucesso.`);
+      } catch (error: any) {
+        console.error('Falha ao enviar foto:', error);
+        setUploadMessage(error?.message || 'Falha ao enviar foto para o Cloudinary.');
+      } finally {
+        setUploadingPhoto(false);
+        setPhotoTypeToUpload('');
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    } else if (currentUploadType === 'video') {
+      if (videos.length >= 5) {
+        setUploadMessage('Limite de 5 vídeos atingido.');
+        return;
+      }
+
+      setUploadingVideo(true);
+      setUploadMessage('Enviando vídeo(s)...');
+      const newVideos: ExpeditionVideo[] = [];
+
+      try {
+        for (const file of Array.from(files).slice(0, 5 - videos.length)) {
+          const uploadResult = await uploadVideoToCloudinary(file, `expeditions/${new Date().toISOString().slice(0, 10)}`);
+          newVideos.push({
+            id: crypto.randomUUID(),
+            label: 'Vídeo',
+            publicUrl: uploadResult.secure_url,
+            public_id: uploadResult.public_id,
+          });
+        }
+
+        setVideos((current) => [...current, ...newVideos]);
+        setUploadMessage(`${newVideos.length} vídeo(s) enviado(s) com sucesso.`);
+      } catch (error: any) {
+        console.error('Falha ao enviar vídeo:', error);
+        setUploadMessage(error?.message || 'Falha ao enviar vídeo para o Cloudinary.');
+      } finally {
+        setUploadingVideo(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     }
   };
@@ -361,6 +437,9 @@ const normalizeStatus = (inputStatus: string) => {
       status: normalizeStatus(form.status),
       date: dateValue,
       responsible_user_id: form.driver_id || null,
+      customer_contact_done: form.customer_contact_done,
+      customer_contact_notes: form.customer_contact_notes || null,
+      assembly_technician: form.assembly_technician || null,
       products: products.map(({ id, sku, name, qty, serial }) => ({ id, sku, name, qty, serial })),
       metadata: {
         volumes,
@@ -369,6 +448,11 @@ const normalizeStatus = (inputStatus: string) => {
           photo_type: photo.photo_type,
           public_url: photo.publicUrl,
           public_id: photo.public_id,
+        })),
+        videos: videos.map((video) => ({
+          label: video.label,
+          public_url: video.publicUrl,
+          public_id: video.public_id,
         })),
       },
     };
@@ -646,6 +730,40 @@ const normalizeStatus = (inputStatus: string) => {
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
                 </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.customer_contact_done}
+                      onChange={(event) => handleInputChange('customer_contact_done', event.target.checked ? 'true' : 'false')}
+                      className="w-4 h-4 text-blue-600 rounded border-slate-300"
+                    />
+                    <span className="text-sm font-bold text-slate-700">Contato com cliente realizado</span>
+                  </label>
+                  <p className="text-xs text-slate-500 ml-7">Marque se já foi conversado com o cliente sobre a entrega</p>
+                </div>
+                {form.customer_contact_done && (
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Notas do Contato</label>
+                    <textarea
+                      value={form.customer_contact_notes}
+                      onChange={(event) => handleInputChange('customer_contact_notes', event.target.value)}
+                      rows={2}
+                      placeholder="Resumo da conversa com o cliente..."
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    />
+                  </div>
+                )}
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Montador / Técnico de Instalação</label>
+                  <input
+                    value={form.assembly_technician}
+                    onChange={(event) => handleInputChange('assembly_technician', event.target.value)}
+                    type="text"
+                    placeholder="Nome de quem montou as máquinas"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
             </section>
           )}
@@ -894,6 +1012,62 @@ const normalizeStatus = (inputStatus: string) => {
               >
                 <Upload size={18} />
                 {uploadingPhoto ? 'Enviando...' : 'Adicionar foto'}
+              </button>
+
+              {uploadMessage && (
+                <p className="mt-3 text-sm text-slate-600">{uploadMessage}</p>
+              )}
+            </section>
+          )}
+
+          {currentStep === 3 && (
+            <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <Video size={20} className="text-green-600" />
+                    Vídeos da Expedição
+                  </h3>
+                  <p className="text-sm text-slate-500">Registre vídeos do carregamento e transporte.</p>
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{videos.length}/5</span>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                {videos.length === 0 ? (
+                  <div className="text-xs text-slate-500 p-4 bg-slate-50 rounded-lg text-center">Nenhum vídeo carregado ainda.</div>
+                ) : (
+                  videos.map((video, index) => (
+                    <div key={video.id} className="flex flex-col gap-3 border border-slate-100 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-16 h-16 rounded-xl object-cover border border-slate-200 bg-slate-900 flex items-center justify-center text-white">
+                          <Video size={24} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-slate-700">{video.label}</p>
+                          <p className="text-[10px] text-slate-400 break-all">{video.publicUrl}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeVideo(video.id)}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleVideoUpload}
+                disabled={uploadingVideo}
+                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-green-700 disabled:opacity-60 transition-all"
+              >
+                <Video size={18} />
+                {uploadingVideo ? 'Enviando...' : 'Adicionar vídeo'}
               </button>
 
               {uploadMessage && (

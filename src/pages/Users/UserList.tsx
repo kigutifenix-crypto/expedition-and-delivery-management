@@ -56,7 +56,28 @@ export const UserList = () => {
       return;
     }
 
+    // Validação simples de e-mail
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newUser.email)) {
+      setMessageDialog({ open: true, title: 'Atenção', message: 'Informe um e-mail válido.' });
+      return;
+    }
+
+    // Verificar se usuário já existe no cadastro para evitar erro de signup
     setSavingUser(true);
+    try {
+      const { data: existing, error: existingError } = await supabase.from('users').select('id, auth_id').eq('email', newUser.email).maybeSingle();
+      if (existingError) {
+        console.error('Erro ao verificar usuário existente:', existingError.message);
+      }
+      if (existing) {
+        setMessageDialog({ open: true, title: 'Erro', message: 'Já existe um usuário cadastrado com este e-mail.' });
+        setSavingUser(false);
+        return;
+      }
+    } catch (err) {
+      console.error('Erro ao verificar existência de usuário:', err);
+    }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: newUser.email,
@@ -64,8 +85,41 @@ export const UserList = () => {
     });
 
     if (authError) {
+      // Se o erro indica que o e-mail já está registrado no Auth, tentamos criar só o registro local
+      const isAlreadyRegistered = authError.message?.toLowerCase().includes('already registered') || authError.status === 422;
+      if (isAlreadyRegistered) {
+        try {
+          const { data: existingUser } = await supabase.from('users').select('*').eq('email', newUser.email).maybeSingle();
+          if (!existingUser) {
+            const payload = {
+              name: newUser.name,
+              email: newUser.email,
+              role: newUser.role,
+              status: 'Ativo',
+              auth_id: null,
+            };
+            const { data: created, error: createErr } = await supabase.from('users').insert([payload]).select('*');
+            if (!createErr && created && created.length > 0) {
+              setUsers((current) => [...current, created[0]]);
+              setMessageDialog({ open: true, title: 'Aviso', message: 'Conta de autenticação já existe; criei o registro local. Vincule manualmente o `auth_id` se necessário.' });
+            } else {
+              setMessageDialog({ open: true, title: 'Erro', message: 'Conta já existe no Auth, e falha ao criar registro local.' });
+            }
+          } else {
+            setMessageDialog({ open: true, title: 'Aviso', message: 'Conta já existe no provedor de autenticação.' });
+          }
+        } catch (err) {
+          console.error('Erro ao tratar conta já existente:', err);
+          setMessageDialog({ open: true, title: 'Erro', message: 'Erro ao verificar/criar registro local para o e-mail existente.' });
+        } finally {
+          setSavingUser(false);
+          return;
+        }
+      }
+
       console.error('Erro ao criar conta de autenticação:', authError.message);
-      setMessageDialog({ open: true, title: 'Erro', message: 'Não foi possível criar a conta de autenticação. Verifique o e-mail e tente novamente.' });
+      const msg = 'Não foi possível criar a conta de autenticação. Verifique o e-mail e tente novamente.';
+      setMessageDialog({ open: true, title: 'Erro', message: msg });
       setSavingUser(false);
       return;
     }

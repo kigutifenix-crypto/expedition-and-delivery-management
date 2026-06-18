@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
-import { Menu, Bell, Search, User, X } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { Menu, Bell, Search, User, X, LogOut } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
   LayoutDashboard, 
@@ -31,8 +31,24 @@ const menuItems = [
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
   const [userName, setUserName] = useState<string>('Usuário');
   const [userRole, setUserRole] = useState<string>('');
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Erro ao deslogar:', error);
+        alert('Falha ao sair do sistema. Veja o console para mais detalhes.');
+        return;
+      }
+      navigate('/login');
+    } catch (err) {
+      console.error('Erro inesperado ao deslogar:', err);
+      alert('Erro inesperado ao sair do sistema.');
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -98,6 +114,16 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   <span>{item.label}</span>
                 </NavLink>
               ))}
+            </div>
+            <div className="pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
+                className="flex items-center gap-3 px-4 py-3 w-full text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="text-sm font-medium">Sair do Sistema</span>
+              </button>
             </div>
           </nav>
         </div>

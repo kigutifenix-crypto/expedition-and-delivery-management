@@ -1,10 +1,11 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, MapPin, User, Briefcase, Camera, CheckCircle2, Signature, Star, Download, FileText, QrCode, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, MapPin, User, Briefcase, Camera, CheckCircle2, Signature, Star, Download, FileText, QrCode, ShieldCheck, Video } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { supabase, uploadDeliveryPhoto } from '../../lib/supabase';
+import { uploadVideoToCloudinary } from '../../lib/cloudinary';
 
 interface Delivery {
   id: string;
@@ -39,6 +40,12 @@ interface Photo {
   captured_at: string;
 }
 
+interface Video {
+  id: string;
+  public_url: string;
+  captured_at: string;
+}
+
 interface DeliveryDetailProps {
   mode?: 'view' | 'edit';
 }
@@ -60,10 +67,12 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   const signatureRef = useRef<SignatureCanvas>(null);
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [uploading, setUploading] = useState('');
   const [selectedPhotoType, setSelectedPhotoType] = useState('');
+  const [currentUploadType, setCurrentUploadType] = useState<'photo' | 'video'>('photo');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [signatureName, setSignatureName] = useState('');
   const [signatureDocument, setSignatureDocument] = useState('');
@@ -191,9 +200,18 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   };
 
   const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    await handlePhotoUpload(selectedPhotoType, event.target.files);
-    setSelectedPhotoType('');
+    if (currentUploadType === 'photo') {
+      await handlePhotoUpload(selectedPhotoType, event.target.files);
+      setSelectedPhotoType('');
+    } else if (currentUploadType === 'video') {
+      await handleVideoUpload(event.target.files);
+    }
     if (event.target) event.target.value = '';
+  };
+
+  const handleVideoUploadClick = () => {
+    setCurrentUploadType('video');
+    fileInputRef.current?.click();
   };
 
   const handlePhotoUpload = async (photoType: string, fileList: FileList | null) => {
@@ -228,6 +246,32 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       setMessage('Foto enviada com sucesso.');
     } catch (uploadError: any) {
       setMessage(uploadError?.message || 'Falha ao enviar foto.');
+      console.error(uploadError);
+    } finally {
+      setUploading('');
+    }
+  };
+
+  const handleVideoUpload = async (fileList: FileList | null) => {
+    if (!id || !fileList || fileList.length === 0) return;
+    setUploading('video');
+
+    try {
+      const file = fileList[0];
+      const uploadResult = await uploadVideoToCloudinary(file, `deliveries/${id}`);
+      
+      setVideos((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          public_url: uploadResult.secure_url,
+          captured_at: new Date().toISOString(),
+        },
+      ]);
+
+      setMessage('Vídeo enviado com sucesso.');
+    } catch (uploadError: any) {
+      setMessage(uploadError?.message || 'Falha ao enviar vídeo.');
       console.error(uploadError);
     } finally {
       setUploading('');
@@ -358,6 +402,10 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       customer_id: currentDelivery.customer_id,
       rating,
       comment: feedbackComments || 'Nenhum comentário informado.',
+      delivery_rating: feedbackDeliveryRating,
+      installation_rating: feedbackInstallationRating,
+      service_rating: feedbackServiceRating,
+      equipment_rating: feedbackEquipmentRating,
     });
 
     if (feedbackError) {
@@ -601,7 +649,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                       if (fileInputRef) fileInputRef.current = instance;
                     }}
                     type="file"
-                    accept="image/*"
+                    accept={currentUploadType === 'photo' ? 'image/*' : 'video/*'}
                     className="hidden"
                     onChange={handleFileInputChange}
                   />
@@ -618,6 +666,43 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Video size={20} className="text-green-600" /> Vídeos da Entrega</h3>
+                <p className="text-sm text-slate-500">Registre vídeos adicionais do processo de entrega.</p>
+              </div>
+              <span className="text-xs uppercase tracking-[0.2em] text-slate-400">{videos.length} enviados</span>
+            </div>
+            <div>
+              {videos.length > 0 && (
+                <div className="grid gap-3 mb-6 sm:grid-cols-2">
+                  {videos.map((video) => (
+                    <a key={video.id} href={video.public_url} target="_blank" rel="noreferrer" className="block rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 p-4 relative">
+                      <div className="h-32 flex items-center justify-center">
+                        <Video size={48} className="text-green-500" />
+                      </div>
+                      <div className="p-3 text-xs text-slate-300">Vídeo • {new Date(video.captured_at).toLocaleString('pt-BR')}</div>
+                    </a>
+                  ))}
+                </div>
+              )}
+              {!isViewMode && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleVideoUploadClick}
+                    disabled={uploading === 'video'}
+                    className="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-60 flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Video size={20} />
+                    {uploading === 'video' ? 'Enviando vídeo...' : 'Enviar vídeo'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">

@@ -21,11 +21,11 @@ export interface Volume {
 
 export interface Feedback {
   rating: number;
-  deliveryQuality: number;
-  installationQuality: number;
-  serviceQuality: number;
-  equipmentCondition: number;
-  comments: string;
+  deliveryQuality?: number;
+  installationQuality?: number;
+  serviceQuality?: number;
+  equipmentCondition?: number;
+  comments?: string;
 }
 
 export interface Expedition {
@@ -43,6 +43,9 @@ export interface Expedition {
   products: Product[];
   volumes: Volume[];
   photos: string[];
+  customerContactDone?: boolean;
+  customerContactNotes?: string;
+  assemblyTechnician?: string;
   deliveryInfo?: DeliveryInfo;
 }
 

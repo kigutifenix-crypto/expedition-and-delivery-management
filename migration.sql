@@ -245,6 +245,16 @@ create index if not exists idx_feedbacks_expedition_id on public.feedbacks (expe
 create index if not exists idx_feedbacks_date on public.feedbacks (date desc);
 create index if not exists idx_feedbacks_company_id on public.feedbacks (company_id);
 
+-- Notas detalhadas por categoria
+alter table public.feedbacks add column if not exists delivery_rating numeric(2,1) check (delivery_rating >= 0 and delivery_rating <= 5);
+alter table public.feedbacks add column if not exists installation_rating numeric(2,1) check (installation_rating >= 0 and installation_rating <= 5);
+alter table public.feedbacks add column if not exists service_rating numeric(2,1) check (service_rating >= 0 and service_rating <= 5);
+alter table public.feedbacks add column if not exists equipment_rating numeric(2,1) check (equipment_rating >= 0 and equipment_rating <= 5);
+create index if not exists idx_feedbacks_delivery_rating on public.feedbacks (delivery_rating);
+create index if not exists idx_feedbacks_installation_rating on public.feedbacks (installation_rating);
+create index if not exists idx_feedbacks_service_rating on public.feedbacks (service_rating);
+create index if not exists idx_feedbacks_equipment_rating on public.feedbacks (equipment_rating);
+
 -- Occurrences table
 create table if not exists public.occurrences (
   id uuid primary key default gen_random_uuid(),
@@ -526,6 +536,9 @@ alter table public.deliveries add column if not exists driver_user_id uuid refer
 alter table public.users add column if not exists company_id uuid references public.companies(id) on delete set null;
 alter table public.customers add column if not exists company_id uuid references public.companies(id) on delete set null;
 alter table public.expeditions add column if not exists company_id uuid references public.companies(id) on delete set null;
+alter table public.expeditions add column if not exists customer_contact_done boolean not null default false;
+alter table public.expeditions add column if not exists customer_contact_notes text;
+alter table public.expeditions add column if not exists assembly_technician text;
 alter table public.expedition_volumes add column if not exists company_id uuid references public.companies(id) on delete set null;
 alter table public.expedition_photos add column if not exists company_id uuid references public.companies(id) on delete set null;
 alter table public.deliveries add column if not exists company_id uuid references public.companies(id) on delete set null;
