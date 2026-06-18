@@ -1059,6 +1059,13 @@ create policy audit_logs_delete on public.audit_logs for delete using (
   public.is_admin() or public.is_supervisor()
 );
 
+-- Grant permissions to views for all authenticated users
+grant select on public.vw_dashboard to anon, authenticated;
+grant select on public.vw_deliveries to anon, authenticated;
+grant select on public.vw_warranties to anon, authenticated;
+grant select on public.vw_customer_summary to anon, authenticated;
+grant select on public.vw_occurrences to anon, authenticated;
+
 -- Storage buckets
 DO $$
 begin
