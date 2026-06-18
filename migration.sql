@@ -598,7 +598,7 @@ where d.checklist is not null
   and not exists (select 1 from public.delivery_checklists dc where dc.delivery_id = d.id);
 
 -- Create views for dashboard and reporting
-create or replace view public.vw_dashboard as
+create or replace view public.vw_dashboard with (security_definer) as
 select
   count(distinct d.id) filter (where d.status in ('pendente','em_transito','chegada','instalacao','assinatura')) as open_deliveries,
   count(distinct d.id) filter (where d.status in ('entregue','finalizado','concluido')) as completed_deliveries,
@@ -616,7 +616,7 @@ left join public.occurrences o on o.delivery_id = d.id;
 drop view if exists public.vw_warranties cascade;
 drop view if exists public.vw_deliveries cascade;
 
-create view public.vw_deliveries as
+create view public.vw_deliveries with (security_definer) as
 select
   d.id,
   d.expedition_id,
@@ -638,7 +638,7 @@ left join public.customers c on c.id = d.customer_id
 left join public.expeditions e on e.id = d.expedition_id
 left join public.users u on u.id = d.driver_user_id;
 
-create view public.vw_warranties as
+create view public.vw_warranties with (security_definer) as
 select
   w.id,
   w.delivery_id,
@@ -659,7 +659,7 @@ left join public.deliveries d on d.id = w.delivery_id
 left join public.customers dc on dc.id = d.customer_id
 left join public.expeditions e on e.id = w.expedition_id;
 
-create or replace view public.vw_customer_summary as
+create or replace view public.vw_customer_summary with (security_definer) as
 select
   c.id,
   c.name,
@@ -680,7 +680,7 @@ left join public.feedbacks f on f.customer_id = c.id
 left join public.warranties w on w.customer_id = c.id
 group by c.id, c.name, c.company_name, c.email, c.phone, c.address, c.city, c.state, c.portal_enabled, c.company_id;
 
-create or replace view public.vw_occurrences as
+create or replace view public.vw_occurrences with (security_definer) as
 select
   o.id,
   o.delivery_id,
