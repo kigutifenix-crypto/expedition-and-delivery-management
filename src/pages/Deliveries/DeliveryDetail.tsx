@@ -196,7 +196,13 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
 
   const handlePhotoTypeSelect = (photoType: string) => {
     setSelectedPhotoType(photoType);
-    fileInputRef.current?.click();
+    setCurrentUploadType('photo');
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = 'image/*';
+      fileInputRef.current.capture = 'environment';
+      fileInputRef.current.multiple = false;
+      fileInputRef.current.click();
+    }
   };
 
   const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,7 +217,12 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
 
   const handleVideoUploadClick = () => {
     setCurrentUploadType('video');
-    fileInputRef.current?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = 'video/*';
+      fileInputRef.current.capture = 'camcorder';
+      fileInputRef.current.multiple = false;
+      fileInputRef.current.click();
+    }
   };
 
   const handlePhotoUpload = async (photoType: string, fileList: FileList | null) => {

@@ -306,12 +306,22 @@ const normalizeStatus = (inputStatus: string) => {
   const handlePhotoTypeSelect = (type: string) => {
     setPhotoTypeToUpload(type);
     setCurrentUploadType('photo');
-    fileInputRef.current?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = 'image/*';
+      fileInputRef.current.capture = 'environment';
+      fileInputRef.current.multiple = true;
+      fileInputRef.current.click();
+    }
   };
 
   const handleVideoUpload = () => {
     setCurrentUploadType('video');
-    fileInputRef.current?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = 'video/*';
+      fileInputRef.current.capture = 'camcorder';
+      fileInputRef.current.multiple = false;
+      fileInputRef.current.click();
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -997,9 +1007,9 @@ const normalizeStatus = (inputStatus: string) => {
                   }
                 }}
                 type="file"
-                accept="image/*"
-                capture="environment"
-                multiple
+                accept={currentUploadType === 'photo' ? 'image/*' : 'video/*'}
+                capture={currentUploadType === 'photo' ? 'environment' : 'camcorder'}
+                multiple={currentUploadType === 'photo'}
                 className="hidden"
                 onChange={handleFileUpload}
               />
