@@ -558,8 +558,17 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
     navigate('/entregas');
   };
 
-  const finalizeDelivery = () => {
+  const finalizeDelivery = async () => {
     if (!id || !delivery) return;
+    // If there's a drawn signature, save it before finalizing
+    try {
+      const canvas = signatureRef.current;
+      if (canvas && !canvas.isEmpty()) {
+        await saveSignature();
+      }
+    } catch (e) {
+      console.error('Erro ao salvar assinatura antes de finalizar:', e);
+    }
     openFeedbackModal('finalizado');
   };
 
