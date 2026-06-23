@@ -577,7 +577,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
     openFeedbackModal('finalizado');
   };
 
-  const generatePdf = () => {
+  const generatePdf = async () => {
     if (!delivery) return;
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -592,11 +592,43 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
     doc.text(`Assinatura: ${delivery.signer_name || '—'}`, 14, 74);
     doc.text(`Documento: ${delivery.signer_document || '—'}`, 14, 82);
     doc.text(`Cargo: ${delivery.signer_role || '—'}`, 14, 90);
-    doc.text(`GPS: ${delivery.signature_gps || gps || '—'}`, 14, 98);
-    doc.text(`IP: ${delivery.signature_ip || ip || '—'}`, 14, 106);
-    doc.text('Fotos enviadas:', 14, 118);
+
+    // Try to get signature image (from state or from DB)
+    let sigData = signatureImage;
+    if (!sigData) {
+      try {
+        const { data: sigRow } = await supabase
+          .from('digital_signatures')
+          .select('signature_data')
+          .eq('delivery_id', id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (sigRow && (sigRow as any).signature_data) {
+          sigData = (sigRow as any).signature_data;
+        }
+      } catch (e) {
+        console.error('Erro ao buscar assinatura para PDF:', e);
+      }
+    }
+
+    if (sigData) {
+      try {
+        // place image below signature info
+        doc.addImage(sigData, 'PNG', 14, 98, 80, 40);
+      } catch (e) {
+        console.error('Erro ao adicionar imagem da assinatura ao PDF:', e);
+        doc.text(`GPS: ${delivery.signature_gps || gps || '—'}`, 14, 98);
+        doc.text(`IP: ${delivery.signature_ip || ip || '—'}`, 14, 106);
+      }
+    } else {
+      doc.text(`GPS: ${delivery.signature_gps || gps || '—'}`, 14, 98);
+      doc.text(`IP: ${delivery.signature_ip || ip || '—'}`, 14, 106);
+    }
+
+    doc.text('Fotos enviadas:', 14, 148);
     photos.slice(0, 6).forEach((photo, index) => {
-      doc.text(`${index + 1}. ${photo.photo_type} — ${photo.public_url}`, 14, 126 + index * 8);
+      doc.text(`${index + 1}. ${photo.photo_type} — ${photo.public_url}`, 14, 156 + index * 8);
     });
     doc.save(`comprovante_entrega_${delivery.order_number || id}.pdf`);
   };
