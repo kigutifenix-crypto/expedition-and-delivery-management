@@ -449,6 +449,72 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
     navigate('/entregas');
   };
 
+  const skipFeedbackAndFinalize = async () => {
+    if (!id || !delivery || !pendingStatus) return;
+    setLoading(true);
+
+    const { data: currentDelivery, error: currentDeliveryError } = await supabase
+      .from('deliveries')
+      .select('id, expedition_id, customer_id, status')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (currentDeliveryError || !currentDelivery) {
+      setMessage('Erro ao buscar entrega antes de finalizar.');
+      setLoading(false);
+      return;
+    }
+
+    const { data: existingWarranty } = await supabase
+      .from('warranties')
+      .select('id')
+      .eq('delivery_id', id)
+      .maybeSingle();
+
+    if (!existingWarranty) {
+      const startDate = new Date().toISOString().slice(0, 10);
+      const endDateObj = new Date();
+      endDateObj.setMonth(endDateObj.getMonth() + 3);
+      const endDate = endDateObj.toISOString().slice(0, 10);
+
+      const { error: warrantyError } = await supabase.from('warranties').insert({
+        delivery_id: id,
+        expedition_id: currentDelivery.expedition_id,
+        customer_id: currentDelivery.customer_id,
+        start_date: startDate,
+        end_date: endDate,
+        status: 'active',
+      });
+
+      if (warrantyError) {
+        console.error('Erro ao criar garantia:', warrantyError);
+      }
+    }
+
+    const updatePayload: Record<string, any> = { status: pendingStatus };
+    if (pendingStatus === 'finalizado') {
+      updatePayload.finished_at = new Date().toISOString();
+    }
+
+    const { error: updateError } = await supabase
+      .from('deliveries')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (updateError) {
+      setMessage('Erro ao atualizar status da entrega.');
+      console.error('Erro ao atualizar entrega:', updateError);
+      setLoading(false);
+      return;
+    }
+
+    setShowFeedbackModal(false);
+    setPendingStatus(null);
+    setMessage(`Entrega ${pendingStatus} finalizada (sem feedback).`);
+    setLoading(false);
+    navigate('/entregas');
+  };
+
   const finalizeDelivery = () => {
     if (!id || !delivery) return;
     openFeedbackModal('finalizado');
@@ -874,6 +940,13 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                   className="inline-flex min-w-[160px] items-center justify-center rounded-3xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                 >
                   Cancelar
+                </button>
+                <button
+                  onClick={skipFeedbackAndFinalize}
+                  disabled={loading}
+                  className="inline-flex min-w-[200px] items-center justify-center rounded-3xl border border-rose-200 bg-white px-5 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-60"
+                >
+                  {loading ? 'Processando...' : 'Pular feedback e finalizar'}
                 </button>
                 <button
                   onClick={submitFeedback}
