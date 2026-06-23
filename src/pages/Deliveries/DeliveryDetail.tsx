@@ -77,6 +77,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   const [signatureName, setSignatureName] = useState('');
   const [signatureDocument, setSignatureDocument] = useState('');
   const [signatureRole, setSignatureRole] = useState('');
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [gps, setGps] = useState('');
   const [ip, setIp] = useState('');
   const [message, setMessage] = useState('');
@@ -151,6 +152,24 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       setSignatureName(deliveryData.signer_name ?? '');
       setSignatureDocument(deliveryData.signer_document ?? '');
       setSignatureRole(deliveryData.signer_role ?? '');
+      // Load last saved signature (if any)
+      try {
+        const { data: sigRow } = await supabase
+          .from('digital_signatures')
+          .select('signature_data')
+          .eq('delivery_id', id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (sigRow && (sigRow as any).signature_data) {
+          setSignatureImage((sigRow as any).signature_data);
+        } else {
+          setSignatureImage(null);
+        }
+      } catch (err) {
+        setSignatureImage(null);
+      }
       setLoading(false);
     };
 
@@ -346,6 +365,30 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       signature_ip: ip,
       signed_at: new Date().toISOString(),
     });
+    // save signature drawing to digital_signatures table (base64 data)
+    try {
+      const dataUrl = signatureRef.current?.getTrimmedCanvas().toDataURL('image/png');
+      if (dataUrl) {
+        const { error: sigError } = await supabase.from('digital_signatures').insert({
+          delivery_id: id,
+          signer_name: signatureName,
+          signer_document: signatureDocument,
+          signer_role: signatureRole,
+          gps_location: gps,
+          ip_address: ip,
+          signature_data: dataUrl,
+        });
+
+        if (sigError) {
+          console.error('Erro ao salvar assinatura na tabela digital_signatures:', sigError);
+        } else {
+          setSignatureImage(dataUrl);
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao processar imagem da assinatura:', e);
+    }
+
     setMessage('Assinatura registrada com sucesso.');
   };
 
@@ -810,6 +853,14 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Data de assinatura</p>
                   <p className="mt-2 text-slate-700">{delivery.signed_at ? new Date(delivery.signed_at).toLocaleString('pt-BR') : 'Nenhuma assinatura registrada'}</p>
                 </div>
+                {signatureImage && (
+                  <div className="rounded-3xl bg-white border border-slate-200 p-4 mt-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Assinatura</p>
+                    <div className="mt-2">
+                      <img src={signatureImage} alt="Assinatura do cliente" className="w-full h-auto object-contain rounded-md" />
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden">
