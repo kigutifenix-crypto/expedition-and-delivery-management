@@ -367,7 +367,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
     });
     // save signature drawing to digital_signatures table (base64 data)
     try {
-      const dataUrl = signatureRef.current?.getTrimmedCanvas().toDataURL('image/png');
+      const dataUrl = signatureRef.current?.getCanvas().toDataURL('image/png');
       if (dataUrl) {
         const { error: sigError } = await supabase.from('digital_signatures').insert({
           delivery_id: id,
@@ -436,7 +436,10 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       });
 
       if (warrantyError) {
-        console.error('Erro ao criar garantia:', warrantyError);
+        // ignore unique-violation (already exists)
+        if ((warrantyError as any).code !== '23505') {
+          console.error('Erro ao criar garantia:', warrantyError);
+        }
       }
     }
 
@@ -530,7 +533,9 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       });
 
       if (warrantyError) {
-        console.error('Erro ao criar garantia:', warrantyError);
+        if ((warrantyError as any).code !== '23505') {
+          console.error('Erro ao criar garantia:', warrantyError);
+        }
       }
     }
 
