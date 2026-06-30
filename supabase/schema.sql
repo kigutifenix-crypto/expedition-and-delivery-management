@@ -29,6 +29,7 @@ create table if not exists expeditions (
   order_number text not null,
   nf_number text not null,
   customer_id uuid references customers(id) on delete set null,
+  client_email text,
   carrier text,
   freight_type text check (freight_type in ('FOB', 'CIF')),
   responsible_id uuid references users(id) on delete set null,
@@ -209,6 +210,23 @@ create index if not exists idx_feedbacks_installation_rating on feedbacks (insta
 create index if not exists idx_feedbacks_service_rating on feedbacks (service_rating);
 create index if not exists idx_feedbacks_equipment_rating on feedbacks (equipment_rating);
 
+-- Email messages table
+create table if not exists email_messages (
+  id uuid primary key default uuid_generate_v4(),
+  company_id uuid references companies(id) on delete set null,
+  delivery_id uuid references deliveries(id) on delete set null,
+  customer_id uuid references customers(id) on delete set null,
+  email text not null,
+  subject text,
+  status text check (status in ('pending', 'sent', 'failed', 'delivered')),
+  sent_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_email_messages_delivery_id on email_messages (delivery_id);
+create index if not exists idx_email_messages_customer_id on email_messages (customer_id);
+create index if not exists idx_email_messages_company_id on email_messages (company_id);
+create index if not exists idx_email_messages_sent_at on email_messages (sent_at desc);
+
 -- Enable Row Level Security and policies for client access
 alter table customers enable row level security;
 alter table deliveries enable row level security;
@@ -216,6 +234,7 @@ alter table delivery_photos enable row level security;
 alter table warranties enable row level security;
 alter table occurrences enable row level security;
 alter table feedbacks enable row level security;
+alter table email_messages enable row level security;
 
 drop policy if exists "Allow read for authenticated users on customers" on customers;
 drop policy if exists "Allow insert for authenticated users on customers" on customers;
@@ -266,6 +285,13 @@ drop policy if exists "Allow insert feedbacks" on feedbacks;
 create policy "Allow read feedbacks for authenticated users" on feedbacks
   for select using (auth.role() is not null);
 create policy "Allow insert feedbacks" on feedbacks
+  for insert with check (auth.role() is not null);
+
+drop policy if exists "Allow read email_messages for authenticated users" on email_messages;
+drop policy if exists "Allow insert email_messages for authenticated users" on email_messages;
+create policy "Allow read email_messages for authenticated users" on email_messages
+  for select using (auth.role() is not null);
+create policy "Allow insert email_messages for authenticated users" on email_messages
   for insert with check (auth.role() is not null);
 
 -- Views used by client pages

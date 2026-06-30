@@ -14,6 +14,7 @@ import {
   Eye,
   Trash2,
   Download,
+  XCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -35,6 +36,7 @@ const statusStyles: Record<string, string> = {
   pendente: 'bg-slate-100 text-slate-700 border-slate-200',
   em_transito: 'bg-amber-100 text-amber-700 border-amber-200',
   concluido: 'bg-green-100 text-green-700 border-green-200',
+  entregue: 'bg-green-100 text-green-700 border-green-200',
   cancelado: 'bg-rose-100 text-rose-700 border-rose-200',
 };
 
@@ -42,6 +44,7 @@ const statusLabels: Record<string, string> = {
   pendente: 'Pendente',
   em_transito: 'Em Trânsito',
   concluido: 'Concluído',
+  entregue: 'Entregue',
   cancelado: 'Cancelado',
 };
 
@@ -49,6 +52,7 @@ const statusProgress: Record<string, number> = {
   pendente: 20,
   em_transito: 50,
   concluido: 100,
+  entregue: 100,
   cancelado: 0,
 };
 
@@ -63,6 +67,8 @@ const statusIcons: Record<string, any> = {
   pendente: Clock,
   em_transito: Truck,
   concluido: CheckCircle,
+  entregue: CheckCircle,
+  cancelado: XCircle,
 };
 
 export const ExpeditionList = () => {
@@ -490,7 +496,7 @@ export const ExpeditionList = () => {
                     </tr>
                   ) : (
                     paginatedExpeditions.map((item) => {
-                      const StatusIcon = statusIcons[item.status];
+                      const StatusIcon = statusIcons[item.status] || Clock;
                       return (
                         <tr
                           key={item.id}
@@ -502,9 +508,9 @@ export const ExpeditionList = () => {
                           className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
                         >
                           <td className="px-6 py-4">
-                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${statusStyles[item.status]}`}>
+                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${statusStyles[item.status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
                               <StatusIcon size={12} />
-                              {statusLabels[item.status]}
+                              {statusLabels[item.status] || item.status}
                             </div>
                             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
                               <div

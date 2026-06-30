@@ -39,6 +39,7 @@ type Expedition = {
   order_number: string;
   nf_number: string;
   client_name: string;
+  client_email?: string | null;
   address: string;
   carrier: string;
   freight_type: string;
@@ -61,6 +62,7 @@ type ExpeditionForm = {
   nf: string;
   order: string;
   client: string;
+  client_email: string;
   address: string;
   carrier: string;
   freight: 'CIF' | 'FOB' | 'CIF/FOB' | 'OUTROS';
@@ -104,6 +106,7 @@ export const NewExpedition = () => {
     nf: '',
     order: '',
     client: '',
+    client_email: '',
     address: '',
     carrier: '',
     freight: 'CIF',
@@ -186,6 +189,7 @@ const normalizeStatus = (inputStatus: string) => {
           nf: data.nf_number,
           order: data.order_number,
           client: data.client_name,
+          client_email: data.client_email || '',
           address: data.address,
           carrier: data.carrier,
           freight: data.freight_type as ExpeditionForm['freight'],
@@ -439,6 +443,7 @@ const normalizeStatus = (inputStatus: string) => {
       order_number: form.order,
       nf_number: form.nf,
       client_name: form.client,
+      client_email: form.client_email || null,
       address: form.address,
       carrier: form.carrier,
       freight_type: form.freight,
@@ -678,6 +683,16 @@ const normalizeStatus = (inputStatus: string) => {
                     onChange={(event) => handleInputChange('client', event.target.value)}
                     type="text"
                     placeholder="Nome da Academia ou Cliente"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase">E-mail do Cliente</label>
+                  <input
+                    value={form.client_email}
+                    onChange={(event) => handleInputChange('client_email', event.target.value)}
+                    type="email"
+                    placeholder="email@cliente.com"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

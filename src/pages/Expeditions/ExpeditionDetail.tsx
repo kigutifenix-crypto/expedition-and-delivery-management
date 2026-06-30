@@ -8,6 +8,7 @@ type Expedition = {
   order_number: string;
   nf_number: string;
   client_name: string;
+  client_email?: string | null;
   address: string;
   carrier: string;
   freight_type: string;
@@ -167,6 +168,9 @@ export const ExpeditionDetail = () => {
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Cliente</p>
                       <p className="mt-2 text-sm font-semibold text-slate-800">{expedition.client_name}</p>
+                      {expedition.client_email && (
+                        <p className="text-xs text-slate-500 mt-1">{expedition.client_email}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Transportadora</p>

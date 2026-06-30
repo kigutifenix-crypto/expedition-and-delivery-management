@@ -6,6 +6,8 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { supabase, uploadDeliveryPhoto } from '../../lib/supabase';
 import { uploadVideoToCloudinary } from '../../lib/cloudinary';
+import { sendFenixGuideAfterDelivery, logWhatsAppMessage, getCustomerPhone } from '../../utils/whatsapp';
+import { sendFenixGuideEmailAfterDelivery, logEmailMessage, getCustomerEmail } from '../../utils/email';
 
 interface Delivery {
   id: string;
@@ -489,6 +491,71 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       return;
     }
 
+    // Send WhatsApp with Fenix guide PDF when delivery is finalized
+    if (pendingStatus === 'finalizado') {
+      try {
+        const customerPhone = await getCustomerPhone(currentDelivery.customer_id);
+        if (customerPhone) {
+          const result = await sendFenixGuideAfterDelivery(
+            id,
+            customerPhone,
+            delivery.customer_name || 'Cliente',
+            delivery.order_number || 'equipamento'
+          );
+
+          // Log the WhatsApp message in database
+          await logWhatsAppMessage(
+            id,
+            currentDelivery.customer_id,
+            customerPhone,
+            'GARANTIA',
+            `Guia de Garantia Fenix enviado para ${delivery.customer_name}`,
+            result.success ? 'sent' : 'failed'
+          );
+
+          if (result.success) {
+            console.log('Guia Fenix enviado via WhatsApp:', result.messageId);
+          } else {
+            console.warn('Falha ao enviar guia Fenix:', result.error);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao enviar WhatsApp:', err);
+        // Continue even if WhatsApp fails
+      }
+
+      // Send Email with Fenix guide PDF when delivery is finalized
+      try {
+        const customerEmail = await getCustomerEmail(currentDelivery.customer_id, currentDelivery.expedition_id);
+        if (customerEmail) {
+          const result = await sendFenixGuideEmailAfterDelivery(
+            id,
+            customerEmail,
+            delivery.customer_name || 'Cliente',
+            delivery.order_number || 'equipamento'
+          );
+
+          // Log the email message in database
+          await logEmailMessage(
+            id,
+            currentDelivery.customer_id,
+            customerEmail,
+            `✅ Guia de Garantia - Equipamento ${delivery.order_number || 'equipamento'}`,
+            result.success ? 'sent' : 'failed'
+          );
+
+          if (result.success) {
+            console.log('Guia Fenix enviado por Email:', result.messageId);
+          } else {
+            console.warn('Falha ao enviar email:', result.error);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao enviar Email:', err);
+        // Continue even if email fails
+      }
+    }
+
     setShowFeedbackModal(false);
     setPendingStatus(null);
     setMessage(`Entrega ${pendingStatus} e feedback salvo com sucesso.`);
@@ -554,6 +621,71 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       console.error('Erro ao atualizar entrega:', updateError);
       setLoading(false);
       return;
+    }
+
+    // Send WhatsApp with Fenix guide PDF when delivery is finalized
+    if (pendingStatus === 'finalizado') {
+      try {
+        const customerPhone = await getCustomerPhone(currentDelivery.customer_id);
+        if (customerPhone) {
+          const result = await sendFenixGuideAfterDelivery(
+            id,
+            customerPhone,
+            delivery.customer_name || 'Cliente',
+            delivery.order_number || 'equipamento'
+          );
+
+          // Log the WhatsApp message in database
+          await logWhatsAppMessage(
+            id,
+            currentDelivery.customer_id,
+            customerPhone,
+            'GARANTIA',
+            `Guia de Garantia Fenix enviado para ${delivery.customer_name}`,
+            result.success ? 'sent' : 'failed'
+          );
+
+          if (result.success) {
+            console.log('Guia Fenix enviado via WhatsApp:', result.messageId);
+          } else {
+            console.warn('Falha ao enviar guia Fenix:', result.error);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao enviar WhatsApp:', err);
+        // Continue even if WhatsApp fails
+      }
+
+      // Send Email with Fenix guide PDF when delivery is finalized
+      try {
+        const customerEmail = await getCustomerEmail(currentDelivery.customer_id, currentDelivery.expedition_id);
+        if (customerEmail) {
+          const result = await sendFenixGuideEmailAfterDelivery(
+            id,
+            customerEmail,
+            delivery.customer_name || 'Cliente',
+            delivery.order_number || 'equipamento'
+          );
+
+          // Log the email message in database
+          await logEmailMessage(
+            id,
+            currentDelivery.customer_id,
+            customerEmail,
+            `✅ Guia de Garantia - Equipamento ${delivery.order_number || 'equipamento'}`,
+            result.success ? 'sent' : 'failed'
+          );
+
+          if (result.success) {
+            console.log('Guia Fenix enviado por Email:', result.messageId);
+          } else {
+            console.warn('Falha ao enviar email:', result.error);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao enviar Email:', err);
+        // Continue even if email fails
+      }
     }
 
     setShowFeedbackModal(false);
