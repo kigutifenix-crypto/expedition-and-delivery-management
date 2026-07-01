@@ -159,6 +159,19 @@ create table if not exists delivery_photos (
   watermark text
 );
 
+create table if not exists expedition_photos (
+  id uuid primary key default uuid_generate_v4(),
+  expedition_id uuid references expeditions(id) on delete cascade,
+  photo_type text not null,
+  storage_path text not null,
+  public_url text not null,
+  captured_at timestamptz not null default now(),
+  latitude numeric,
+  longitude numeric,
+  city text,
+  watermark text
+);
+
 create table if not exists warranties (
   id uuid primary key default uuid_generate_v4(),
   expedition_id uuid references expeditions(id) on delete set null,
@@ -227,14 +240,42 @@ create index if not exists idx_email_messages_customer_id on email_messages (cus
 create index if not exists idx_email_messages_company_id on email_messages (company_id);
 create index if not exists idx_email_messages_sent_at on email_messages (sent_at desc);
 
+-- Enable Row Level Security on users table
+alter table users enable row level security;
+
+drop policy if exists "Allow read for authenticated users on users" on users;
+drop policy if exists "Allow insert for authenticated users on users" on users;
+drop policy if exists "Allow update for authenticated users on users" on users;
+drop policy if exists "Allow delete for authenticated users on users" on users;
+create policy "Allow read for authenticated users on users" on users
+  for select using (auth.role() = 'authenticated');
+create policy "Allow insert for authenticated users on users" on users
+  for insert with check (auth.role() = 'authenticated');
+create policy "Allow update for authenticated users on users" on users
+  for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "Allow delete for authenticated users on users" on users
+  for delete using (auth.role() = 'authenticated');
+
 -- Enable Row Level Security and policies for client access
 alter table customers enable row level security;
 alter table deliveries enable row level security;
 alter table delivery_photos enable row level security;
+alter table expedition_photos enable row level security;
 alter table warranties enable row level security;
 alter table occurrences enable row level security;
 alter table feedbacks enable row level security;
 alter table email_messages enable row level security;
+
+drop policy if exists "Allow read photos for authenticated users" on expedition_photos;
+drop policy if exists "Allow insert photos" on expedition_photos;
+create policy "Allow read photos for authenticated users" on expedition_photos
+  for select using (auth.role() = 'authenticated');
+create policy "Allow insert photos" on expedition_photos
+  for insert with check (auth.role() = 'authenticated');
+create policy "Allow update photos" on expedition_photos
+  for update using (auth.role() = 'authenticated');
+create policy "Allow delete photos" on expedition_photos
+  for delete using (auth.role() = 'authenticated');
 
 drop policy if exists "Allow read for authenticated users on customers" on customers;
 drop policy if exists "Allow insert for authenticated users on customers" on customers;

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, MapPin, User, Briefcase, Camera, CheckCircle2, Signature, Star, Download, FileText, QrCode, ShieldCheck, Video } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
@@ -147,10 +147,25 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
         .from<Photo>('delivery_photos')
         .select('*')
         .eq('delivery_id', id)
+        .neq('photo_type', 'video')
+        .order('captured_at', { ascending: true });
+
+      const { data: videoData } = await supabase
+        .from('delivery_photos')
+        .select('*')
+        .eq('delivery_id', id)
+        .eq('photo_type', 'video')
         .order('captured_at', { ascending: true });
 
       setDelivery({ ...deliveryData, customer_name: customerName });
       setPhotos(photoData ?? []);
+      setVideos(
+        (videoData ?? []).map((v: any) => ({
+          id: v.id,
+          public_url: v.public_url,
+          captured_at: v.captured_at,
+        }))
+      );
       setSignatureName(deliveryData.signer_name ?? '');
       setSignatureDocument(deliveryData.signer_document ?? '');
       setSignatureRole(deliveryData.signer_role ?? '');
@@ -291,13 +306,33 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
     try {
       const file = fileList[0];
       const uploadResult = await uploadVideoToCloudinary(file, `deliveries/${id}`);
-      
+
+      // Persist to Supabase using delivery_photos with photo_type='video'
+      const { data: savedVideo, error: saveError } = await supabase
+        .from('delivery_photos')
+        .insert([
+          {
+            delivery_id: id,
+            photo_type: 'video',
+            storage_path: uploadResult.public_id ?? uploadResult.secure_url,
+            public_url: uploadResult.secure_url,
+          },
+        ])
+        .select('id, public_url, captured_at')
+        .single();
+
+      if (saveError) {
+        console.error('Erro ao salvar vídeo no banco:', saveError.message);
+        setMessage('Vídeo enviado ao Cloudinary, mas falha ao salvar no banco.');
+        return;
+      }
+
       setVideos((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
-          public_url: uploadResult.secure_url,
-          captured_at: new Date().toISOString(),
+          id: savedVideo.id,
+          public_url: savedVideo.public_url,
+          captured_at: savedVideo.captured_at,
         },
       ]);
 
