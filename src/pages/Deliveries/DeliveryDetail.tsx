@@ -92,6 +92,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   const [feedbackServiceRating, setFeedbackServiceRating] = useState(5);
   const [feedbackEquipmentRating, setFeedbackEquipmentRating] = useState(5);
   const [feedbackComments, setFeedbackComments] = useState('');
+  const [manualEmail, setManualEmail] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -561,7 +562,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
 
       // Send Email with Fenix guide PDF when delivery is finalized
       try {
-        const customerEmail = await getCustomerEmail(currentDelivery.customer_id, currentDelivery.expedition_id);
+        const customerEmail = manualEmail.trim() || await getCustomerEmail(currentDelivery.customer_id, currentDelivery.expedition_id);
         if (customerEmail) {
           const result = await sendFenixGuideEmailAfterDelivery(
             id,
@@ -693,7 +694,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
 
       // Send Email with Fenix guide PDF when delivery is finalized
       try {
-        const customerEmail = await getCustomerEmail(currentDelivery.customer_id, currentDelivery.expedition_id);
+        const customerEmail = manualEmail.trim() || await getCustomerEmail(currentDelivery.customer_id, currentDelivery.expedition_id);
         if (customerEmail) {
           const result = await sendFenixGuideEmailAfterDelivery(
             id,
@@ -867,43 +868,6 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                   <input type="text" value={ip} readOnly className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" />
                 </div>
               </div>
-              {isViewMode ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <label className="text-xs uppercase text-slate-500">Nome do responsável</label>
-                    <input value={delivery.signer_name ?? ''} readOnly className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Nenhum registro" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs uppercase text-slate-500">Documento</label>
-                    <input value={delivery.signer_document ?? ''} readOnly className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Nenhum registro" />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs uppercase text-slate-500">Cargo</label>
-                    <input value={delivery.signer_role ?? ''} readOnly className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Nenhum registro" />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label className="block">
-                      <span className="text-xs uppercase text-slate-500">Nome do responsável</span>
-                      <input value={signatureName} onChange={(event) => setSignatureName(event.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Nome completo" />
-                    </label>
-                    <label className="block">
-                      <span className="text-xs uppercase text-slate-500">Documento</span>
-                      <input value={signatureDocument} onChange={(event) => setSignatureDocument(event.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="CPF/CNPJ" />
-                    </label>
-                    <label className="block md:col-span-2">
-                      <span className="text-xs uppercase text-slate-500">Cargo</span>
-                      <input value={signatureRole} onChange={(event) => setSignatureRole(event.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Função do responsável" />
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_160px]">
-                    <button type="button" onClick={saveSignature} className="w-full bg-blue-600 text-white rounded-2xl py-3 font-semibold">Registrar Assinatura</button>
-                    <button type="button" onClick={clearSignature} className="w-full bg-slate-100 text-slate-700 rounded-2xl py-3 font-semibold">Limpar</button>
-                  </div>
-                </>
-              )}
             </div>
           </div>
 
@@ -1042,7 +1006,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="font-bold text-slate-800 flex items-center gap-2"><Signature size={20} className="text-blue-600" /> Assinatura do cliente</h3>
-                <p className="text-sm text-slate-500">Capture a assinatura do cliente e mantenha o registro salvo.</p>
+                <p className="text-sm text-slate-500">Preencha os dados do responsável e capture a assinatura.</p>
               </div>
               <div className="rounded-2xl bg-slate-100 px-3 py-2 text-xs uppercase tracking-[0.2em] text-slate-500">{delivery.signed_at ? 'Assinado' : 'Pendente'}</div>
             </div>
@@ -1076,14 +1040,42 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                 )}
               </div>
             ) : (
-              <div className="bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden">
-                <div className="p-3 border-b border-slate-200 bg-white flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase text-slate-500">Assine abaixo</span>
-                  <button onClick={clearSignature} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Limpar</button>
+              <div className="space-y-4">
+                {/* Dados do responsável */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="text-xs uppercase text-slate-500">Nome do responsável</span>
+                    <input value={signatureName} onChange={(e) => setSignatureName(e.target.value)} className="mt-1 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Nome completo" />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs uppercase text-slate-500">Documento</span>
+                    <input value={signatureDocument} onChange={(e) => setSignatureDocument(e.target.value)} className="mt-1 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="CPF/CNPJ" />
+                  </label>
+                  <label className="block md:col-span-2">
+                    <span className="text-xs uppercase text-slate-500">Cargo</span>
+                    <input value={signatureRole} onChange={(e) => setSignatureRole(e.target.value)} className="mt-1 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl" placeholder="Função do responsável" />
+                  </label>
                 </div>
-                <div className="h-64">
-                  <SignatureCanvas ref={signatureRef} penColor="black" canvasProps={{ className: 'w-full h-full' }} />
+
+                {/* Canvas de assinatura */}
+                <div className="bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden">
+                  <div className="p-3 border-b border-slate-200 bg-white flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase text-slate-500">Assine abaixo</span>
+                    <button onClick={clearSignature} className="text-xs font-semibold text-slate-500 hover:text-slate-700">Limpar</button>
+                  </div>
+                  <div className="h-64">
+                    <SignatureCanvas ref={signatureRef} penColor="black" canvasProps={{ className: 'w-full h-full' }} />
+                  </div>
                 </div>
+
+                {/* Botão de registrar */}
+                <button
+                  type="button"
+                  onClick={saveSignature}
+                  className="w-full bg-blue-600 text-white rounded-2xl py-3 font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Registrar Assinatura
+                </button>
               </div>
             )}
           </div>
@@ -1195,6 +1187,26 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                   rows={5}
                   className="mt-4 min-h-[150px] w-full rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   placeholder="Escreva o comentário do cliente aqui..."
+                />
+              </div>
+
+              {/* Email do cliente para envio do guia de garantia */}
+              <div className="rounded-3xl border border-blue-100 bg-blue-50/60 p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">E-mail para guia de garantia</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Se não cadastrado na expedição, informe o e-mail do cliente para receber o guia.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs uppercase tracking-[0.18em] text-blue-600">Opcional</span>
+                </div>
+                <input
+                  type="email"
+                  value={manualEmail}
+                  onChange={(e) => setManualEmail(e.target.value)}
+                  placeholder="cliente@email.com"
+                  className="mt-4 w-full rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
 
