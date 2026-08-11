@@ -1,108 +1,99 @@
-
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Truck, 
-  Users, 
-  Dumbbell, 
-  Star, 
-  ShieldCheck, 
-  UserCircle, 
-  BarChart3, 
-  Settings,
-  LogOut
-} from 'lucide-react';
+import { Dumbbell, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
 import { supabase } from '../lib/supabase';
 import { MessageDialog } from './ui/MessageDialog';
+import { navGroups } from './nav-items';
 
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Package, label: 'Expedições', path: '/expedicoes' },
-  { icon: Truck, label: 'Entregas', path: '/entregas' },
-  { icon: Users, label: 'Clientes', path: '/clientes' },
-  { icon: Star, label: 'Feedbacks', path: '/feedbacks' },
-  { icon: ShieldCheck, label: 'Garantias', path: '/garantias' },
-  { icon: BarChart3, label: 'Relatórios', path: '/relatorios' },
-  { icon: UserCircle, label: 'Usuários', path: '/usuarios' },
-  { icon: Settings, label: 'Configurações', path: '/configuracoes' },
-];
+export const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  clsx(
+    'group relative flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-all duration-200',
+    isActive
+      ? 'bg-brand-700 font-semibold text-white shadow-[0_10px_22px_-14px_rgba(31,58,138,.95)]'
+      : 'font-medium text-ink-soft hover:bg-brand-50 hover:text-brand-700',
+  );
 
-export const Sidebar = () => {
+export const Brand: React.FC<{ compact?: boolean }> = ({ compact = false }) => (
+  <div className="flex items-center gap-3">
+    <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-brand-700 text-white shadow-[0_10px_22px_-14px_rgba(31,58,138,.95)]">
+      <Dumbbell className="h-5 w-5" />
+    </div>
+    {!compact && (
+      <div className="leading-tight">
+        <p className="text-[17px] font-bold tracking-tight text-ink">FitLog</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink-faint">Logística Fitness</p>
+      </div>
+    )}
+  </div>
+);
+
+export const SidebarNav: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => (
+  <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5">
+    {navGroups.map((group) => (
+      <div key={group.title}>
+        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-ink-faint">{group.title}</p>
+        <div className="space-y-1">
+          {group.items.map((item) => (
+            <NavLink key={item.path} to={item.path} end={item.path === '/'} onClick={onNavigate} className={navLinkClass}>
+              <item.icon className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-105" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </div>
+    ))}
+  </nav>
+);
+
+export const useLogout = () => {
   const navigate = useNavigate();
-  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
-  const [messageDialogText, setMessageDialogText] = useState('');
-
-  const showErrorMessage = (message: string) => {
-    setMessageDialogText(message);
-    setMessageDialogOpen(true);
-  };
-
-  const handleLogout = async () => {
+  const [error, setError] = useState('');
+  const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Erro ao deslogar:', error);
-        showErrorMessage('Falha ao sair do sistema. Veja o console para mais detalhes.');
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        setError('Falha ao sair do sistema. Tente novamente em alguns instantes.');
         return;
       }
       navigate('/login');
-    } catch (err) {
-      console.error('Erro inesperado ao deslogar:', err);
-      showErrorMessage('Erro inesperado ao sair do sistema.');
+    } catch {
+      setError('Erro inesperado ao sair do sistema.');
     }
   };
-  return (
-    <aside className="w-64 bg-slate-100 border-r border-slate-300 h-screen sticky top-0 hidden lg:flex flex-col">
-      <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Dumbbell className="text-white w-6 h-6" />
-        </div>
-        <div>
-          <h1 className="font-bold text-xl text-slate-800">FitLog</h1>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold leading-tight">Logística Fitness</p>
-        </div>
-      </div>
-      
-      <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => clsx(
-              "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group",
-              isActive 
-                ? "bg-blue-100 text-blue-800 font-semibold" 
-                : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <item.icon className={clsx(
-              "w-5 h-5",
-              "group-hover:scale-110 transition-transform"
-            )} />
-            <span className="text-sm">{item.label}</span>
-          </NavLink>
-        ))}
-      </nav>
+  return { logout, error, clearError: () => setError('') };
+};
 
-      <div className="p-4 border-t border-slate-100">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="text-sm font-medium">Sair do Sistema</span>
-        </button>
+export const LogoutButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:bg-danger-soft hover:text-danger"
+  >
+    <LogOut className="h-[18px] w-[18px]" />
+    Sair do sistema
+  </button>
+);
+
+export const Sidebar = () => {
+  const { logout, error, clearError } = useLogout();
+
+  return (
+    <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col border-r border-line bg-surface lg:flex">
+      <div className="px-5 py-5">
+        <Brand />
       </div>
-      <MessageDialog
-        open={messageDialogOpen}
-        title="Atenção"
-        message={messageDialogText}
-        onClose={() => setMessageDialogOpen(false)}
-      />
+      <SidebarNav />
+      <div className="border-t border-line p-4">
+        <div className="mb-3 rounded-[12px] bg-brand-50 p-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-700">Plano operacional</p>
+          <p className="mt-1 text-[12px] leading-snug text-ink-soft">
+            Rastreamento de expedições, entregas e garantias em um só lugar.
+          </p>
+        </div>
+        <LogoutButton onClick={logout} />
+      </div>
+      <MessageDialog open={Boolean(error)} title="Atenção" message={error} onClose={clearError} />
     </aside>
   );
 };

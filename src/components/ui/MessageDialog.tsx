@@ -1,4 +1,5 @@
 import React from 'react';
+import { Info } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 
@@ -14,19 +15,22 @@ export const MessageDialog: React.FC<MessageDialogProps> = ({
   open,
   title = 'Aviso',
   message,
-  buttonText = 'Fechar',
+  buttonText = 'Entendi',
   onClose,
-}) => {
-  return (
-    <Modal open={open} title={title} onClose={onClose}>
-      <div className="space-y-6">
-        <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">{message}</p>
-        <div className="flex justify-end">
-          <Button size="md" type="button" onClick={onClose}>
-            {buttonText}
-          </Button>
-        </div>
+}) => (
+  <Modal open={open} title={title} size="sm" onClose={onClose}>
+    <div className="space-y-6">
+      <div className="flex gap-3">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
+          <Info size={18} />
+        </span>
+        <p className="whitespace-pre-line text-sm leading-relaxed text-ink-soft">{message}</p>
       </div>
-    </Modal>
-  );
-};
+      <div className="flex justify-end">
+        <Button type="button" onClick={onClose}>
+          {buttonText}
+        </Button>
+      </div>
+    </div>
+  </Modal>
+);

@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from './Button';
 
 interface PaginationProps {
   current: number;
@@ -11,107 +10,68 @@ interface PaginationProps {
 
 export const Pagination: React.FC<PaginationProps> = ({ current, total, pageSize, onPageChange }) => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  
-  // Ensure current is a valid number
   const validCurrent = Math.max(1, Math.min(Number(current) || 1, totalPages));
-
-  const handlePrevious = () => {
-    if (validCurrent > 1) {
-      onPageChange(validCurrent - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (validCurrent < totalPages) {
-      onPageChange(validCurrent + 1);
-    }
-  };
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisible = 5;
-
     if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Always show first page
-      pages.push(1);
-
-      // Calculate range around current page
-      const startPage = Math.max(2, validCurrent - 1);
-      const endPage = Math.min(totalPages - 1, validCurrent + 1);
-
-      if (startPage > 2) {
-        pages.push('...');
-      }
-
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
-
-      if (endPage < totalPages - 1) {
-        pages.push('...');
-      }
-
-      // Always show last page
-      pages.push(totalPages);
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
     }
-
+    pages.push(1);
+    const startPage = Math.max(2, validCurrent - 1);
+    const endPage = Math.min(totalPages - 1, validCurrent + 1);
+    if (startPage > 2) pages.push('...');
+    for (let i = startPage; i <= endPage; i++) pages.push(i);
+    if (endPage < totalPages - 1) pages.push('...');
+    pages.push(totalPages);
     return pages;
   };
 
-  const pages = getPageNumbers();
+  const navBtn =
+    'inline-flex h-9 items-center gap-1 rounded-[10px] border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink-soft transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-45';
+
+  const from = total === 0 ? 0 : (validCurrent - 1) * pageSize + 1;
+  const to = Math.min(total, validCurrent * pageSize);
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="text-sm text-slate-400">
-        Página <span className="font-semibold text-slate-200">{validCurrent}</span> de{' '}
-        <span className="font-semibold text-slate-200">{totalPages}</span> ({total} registros)
-      </div>
+    <div className="flex flex-col gap-3 border-t border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-[13px] text-ink-soft">
+        Exibindo <span className="font-semibold text-ink">{from}–{to}</span> de{' '}
+        <span className="font-semibold text-ink">{total}</span> registros
+      </p>
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handlePrevious}
-          disabled={validCurrent === 1}
-          className="flex items-center gap-1"
-        >
-          <ChevronLeft size={16} />
-          Anterior
-        </Button>
+      <div className="flex items-center gap-1.5">
+        <button type="button" className={navBtn} onClick={() => onPageChange(validCurrent - 1)} disabled={validCurrent === 1}>
+          <ChevronLeft size={15} />
+          <span className="hidden sm:inline">Anterior</span>
+        </button>
 
-        <div className="flex items-center gap-1">
-          {pages.map((page, idx) => (
-            <React.Fragment key={idx}>
-              {page === '...' ? (
-                <span className="px-2 py-1 text-slate-500">…</span>
-              ) : (
-                <Button
-                  variant={validCurrent === page ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => onPageChange(page as number)}
-                  className="w-10 h-10 p-0 flex items-center justify-center"
-                >
-                  {page}
-                </Button>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
+        {getPageNumbers().map((page, idx) =>
+          page === '...' ? (
+            <span key={`gap-${idx}`} className="px-1.5 text-ink-faint">…</span>
+          ) : (
+            <button
+              key={page}
+              type="button"
+              onClick={() => onPageChange(page as number)}
+              aria-current={validCurrent === page ? 'page' : undefined}
+              className={`h-9 w-9 rounded-[10px] text-[13px] font-semibold transition-colors ${
+                validCurrent === page
+                  ? 'bg-brand-700 text-white shadow-[0_8px_18px_-12px_rgba(31,58,138,.9)]'
+                  : 'text-ink-soft hover:bg-surface-muted'
+              }`}
+            >
+              {page}
+            </button>
+          ),
+        )}
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleNext}
-          disabled={validCurrent === totalPages}
-          className="flex items-center gap-1"
-        >
-          Próxima
-          <ChevronRight size={16} />
-        </Button>
+        <button type="button" className={navBtn} onClick={() => onPageChange(validCurrent + 1)} disabled={validCurrent === totalPages}>
+          <span className="hidden sm:inline">Próxima</span>
+          <ChevronRight size={15} />
+        </button>
       </div>
     </div>
   );

@@ -1,8 +1,15 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, Lock, Mail, ArrowRight } from 'lucide-react';
+import { Dumbbell, Lock, Mail, ArrowRight, ShieldCheck, Truck, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+
+const highlights = [
+  { icon: Truck, title: 'Expedição rastreada', text: 'Da separação à entrega, com histórico completo por NF.' },
+  { icon: ShieldCheck, title: 'Garantias sob controle', text: 'Prazos, acionamentos e status ativos em um só painel.' },
+  { icon: Star, title: 'Feedback do cliente', text: 'Avaliações consolidadas para elevar o nível do serviço.' },
+];
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -19,7 +26,7 @@ export const Login = () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setErrorMessage(error.message);
+      setErrorMessage('Não foi possível entrar. Verifique e-mail e senha.');
       setLoading(false);
       return;
     }
@@ -28,75 +35,120 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-        <div className="p-8 md:p-12">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-              <Dumbbell className="text-white w-8 h-8" />
-            </div>
-            <div>
-              <h1 className="font-bold text-2xl text-slate-800">FitLog</h1>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-tight">Logística Fitness</p>
-            </div>
+    <div className="grid min-h-screen bg-canvas lg:grid-cols-[1.05fr_1fr]">
+      {/* Painel de marca */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-700 p-12 text-white lg:flex">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.18]"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 20% 20%, #ffffff 0, transparent 45%), radial-gradient(circle at 85% 70%, #5f8cfa 0, transparent 50%)',
+          }}
+        />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-white/12 ring-1 ring-white/25">
+            <Dumbbell className="h-6 w-6" />
           </div>
-
-          <div className="space-y-2 mb-8">
-            <h2 className="text-2xl font-bold text-slate-800">Bem-vindo de volta</h2>
-            <p className="text-slate-500 text-sm">Acesse o sistema de gestão de expedição e entregas.</p>
-          </div>
-
-          <form className="space-y-6" onSubmit={handleLogin}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase">E-mail</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="seu@email.com"
-                  className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-slate-500 uppercase">Senha</label>
-                <a href="#" className="text-[10px] font-bold text-blue-600 hover:underline uppercase">Esqueceu a senha?</a>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
-                />
-              </div>
-            </div>
-
-            {errorMessage && <p className="text-sm text-rose-600">{errorMessage}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2 group"
-            >
-              {loading ? 'Entrando...' : 'Entrar no Sistema'}
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </form>
-
-          <div className="mt-8 pt-8 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-400 font-medium">
-              &copy; 2024 FitLog Logística de Equipamentos. Todos os direitos reservados.
-            </p>
+          <div className="leading-tight">
+            <p className="text-lg font-bold">FitLog</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-100">Logística Fitness</p>
           </div>
         </div>
-      </div>
+
+        <div className="relative max-w-md">
+          <h2 className="text-[34px] font-bold leading-[1.15] tracking-tight">
+            A operação de entregas inteira, sem planilha nenhuma.
+          </h2>
+          <p className="mt-4 text-[15px] leading-relaxed text-brand-100">
+            Centralize expedições, entregas, garantias e feedbacks com rastreio ponta a ponta.
+          </p>
+
+          <ul className="mt-10 space-y-5">
+            {highlights.map((item) => (
+              <li key={item.title} className="flex gap-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/12 ring-1 ring-white/20">
+                  <item.icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">{item.title}</p>
+                  <p className="text-[13px] leading-snug text-brand-100">{item.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative text-[12px] text-brand-200">© {new Date().getFullYear()} FitLog Logística de Equipamentos</p>
+      </aside>
+
+      {/* Formulário */}
+      <main className="flex items-center justify-center px-5 py-12 sm:px-10">
+        <div className="w-full max-w-[400px]">
+          <div className="mb-9 flex items-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-brand-700 text-white">
+              <Dumbbell className="h-5 w-5" />
+            </div>
+            <div className="leading-tight">
+              <p className="text-[17px] font-bold text-ink">FitLog</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink-faint">Logística Fitness</p>
+            </div>
+          </div>
+
+          <p className="text-eyebrow mb-2">Acesso restrito</p>
+          <h1 className="text-[26px] font-bold leading-tight text-ink">Bem-vindo de volta</h1>
+          <p className="mt-2 text-sm text-ink-soft">
+            Entre para acompanhar a expedição e as entregas do dia.
+          </p>
+
+          <form className="mt-8 space-y-5" onSubmit={handleLogin}>
+            <Input
+              label="E-mail corporativo"
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="voce@empresa.com"
+              icon={<Mail size={16} />}
+              required
+            />
+
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="label-field">Senha</span>
+                <a href="#" className="mb-1.5 text-[12px] font-semibold text-brand-600 hover:underline">
+                  Esqueceu a senha?
+                </a>
+              </div>
+              <Input
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                icon={<Lock size={16} />}
+                required
+              />
+            </div>
+
+            {errorMessage && (
+              <p className="rounded-[10px] border border-danger/20 bg-danger-soft px-3 py-2.5 text-[13px] font-medium text-danger">
+                {errorMessage}
+              </p>
+            )}
+
+            <Button type="submit" size="lg" isLoading={loading} className="w-full">
+              Entrar no sistema
+              <ArrowRight size={17} />
+            </Button>
+          </form>
+
+          <p className="mt-8 border-t border-line pt-6 text-[12px] leading-relaxed text-ink-faint">
+            Ambiente monitorado. O uso das credenciais é individual e registrado.
+          </p>
+        </div>
+      </main>
     </div>
   );
 };

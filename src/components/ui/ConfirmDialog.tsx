@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 
@@ -15,27 +16,30 @@ interface ConfirmDialogProps {
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   open,
-  title,
+  title = 'Confirmar ação',
   description,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   isLoading = false,
   onConfirm,
   onCancel,
-}) => {
-  return (
-    <Modal open={open} title={title} onClose={onCancel}>
-      <div className="space-y-6">
-        <div className="text-sm text-slate-600">{description}</div>
-        <div className="flex justify-end gap-3 pt-4">
-          <Button variant="secondary" size="md" type="button" onClick={onCancel}>
-            {cancelText}
-          </Button>
-          <Button variant="danger" size="md" type="button" onClick={onConfirm} isLoading={isLoading}>
-            {confirmText}
-          </Button>
-        </div>
+}) => (
+  <Modal open={open} title={title} size="sm" onClose={onCancel}>
+    <div className="space-y-6">
+      <div className="flex gap-3">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger">
+          <AlertTriangle size={18} />
+        </span>
+        <div className="text-sm leading-relaxed text-ink-soft">{description}</div>
       </div>
-    </Modal>
-  );
-};
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" type="button" onClick={onCancel}>
+          {cancelText}
+        </Button>
+        <Button variant="danger" type="button" onClick={onConfirm} isLoading={isLoading}>
+          {confirmText}
+        </Button>
+      </div>
+    </div>
+  </Modal>
+);

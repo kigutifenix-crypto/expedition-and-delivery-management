@@ -1,52 +1,206 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   FitLog — Design System (Clean Corporativo)
+   Tokens centralizados. Nunca use cores cruas nos componentes:
+   use as classes semânticas/utilitárias definidas aqui.
+   ========================================================================== */
+
+@theme {
+  /* Cores de marca */
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dbe6ff;
+  --color-brand-200: #bed3ff;
+  --color-brand-300: #92b4ff;
+  --color-brand-400: #5f8cfa;
+  --color-brand-500: #2563eb;
+  --color-brand-600: #1d4ed8;
+  --color-brand-700: #1f3a8a;
+  --color-brand-800: #1b2f6d;
+  --color-brand-900: #14224f;
+
+  /* Superfícies e texto */
+  --color-canvas: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f2f4f7;
+  --color-line: #e6e8ee;
+  --color-line-strong: #d6dae3;
+  --color-ink: #0f172a;
+  --color-ink-soft: #475569;
+  --color-ink-faint: #7c879b;
+
+  /* Status */
+  --color-success: #15803d;
+  --color-success-soft: #e8f7ee;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef4e6;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fdeced;
+  --color-info: #1d4ed8;
+  --color-info-soft: #e8efff;
+
+  /* Tipografia */
+  --font-sans: "Inter", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Raios */
+  --radius-card: 14px;
+  --radius-field: 10px;
+
+  /* Sombras */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -16px rgba(15, 23, 42, 0.18);
+  --shadow-pop: 0 24px 60px -24px rgba(15, 23, 42, 0.35);
+}
+
 @layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
-    background-color: #eef2ff;
-    color: #0f172a;
+    font-family: var(--font-sans);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-feature-settings: "cv11", "ss01";
   }
 
-  .text-slate-500 {
-    color: #334155;
+  h1, h2, h3, h4 {
+    letter-spacing: -0.018em;
   }
 
-  .text-slate-400 {
-    color: #475569;
+  ::selection {
+    background: var(--color-brand-100);
   }
 
-  .text-slate-600 {
-    color: #1e293b;
+  /* Scrollbar discreta */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
   }
 
-  .text-slate-700 {
-    color: #0f172a;
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
   }
+}
 
-  .bg-slate-50 {
-    background-color: #f8fafc;
-  }
+/* ---------------------------------------------------------------------------
+   Utilitários de superfície
+   --------------------------------------------------------------------------- */
 
-  .bg-slate-100 {
-    background-color: #e2e8f0;
-  }
+@utility surface-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
 
-  .bg-white {
-    background-color: #ffffff;
-  }
+@utility surface-subtle {
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
 
-  .border-slate-200 {
-    border-color: #cbd5e1;
-  }
+@utility hairline {
+  border-color: var(--color-line);
+}
 
-  .border-slate-100 {
-    border-color: #cbd5e1;
-  }
+@utility text-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
 
-  .hover\:bg-slate-100:hover {
-    background-color: #e2e8f0;
+/* Campos de formulário — aplique .field em inputs/selects/textarea legados */
+@utility field {
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-field);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  &::placeholder { color: var(--color-ink-faint); }
+  &:hover:not(:disabled) { border-color: var(--color-brand-300); }
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 4px var(--color-brand-50);
   }
+  &:disabled { background: var(--color-surface-muted); color: var(--color-ink-faint); }
+}
 
-  .hover\:bg-slate-50:hover {
-    background-color: #f8fafc;
-  }
+@utility label-field {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  margin-bottom: 0.375rem;
+}
+
+/* Badge de status genérica */
+@utility badge-base {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+/* Animações */
+@utility animate-rise {
+  animation: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@utility skeleton {
+  background: linear-gradient(90deg, var(--color-surface-muted) 25%, #e9ecf2 37%, var(--color-surface-muted) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+/* ---------------------------------------------------------------------------
+   Compatibilidade: as páginas legadas usam classes utilitárias cruas (slate, blue).
+   Os mapeamentos abaixo alinham esse legado ao novo design system, sem
+   precisar reescrever todas as telas de uma vez.
+   --------------------------------------------------------------------------- */
+@layer base {
+  .bg-slate-50 { background-color: var(--color-surface-muted); }
+  .bg-slate-100 { background-color: var(--color-surface-muted); }
+  .bg-white { background-color: var(--color-surface); }
+  .text-slate-400 { color: var(--color-ink-faint); }
+  .text-slate-500 { color: var(--color-ink-soft); }
+  .text-slate-600 { color: var(--color-ink-soft); }
+  .text-slate-700 { color: var(--color-ink); }
+  .text-slate-800 { color: var(--color-ink); }
+  .border-slate-100,
+  .border-slate-200,
+  .border-slate-300 { border-color: var(--color-line); }
+  .rounded-xl { border-radius: var(--radius-card); }
+  .shadow-sm { box-shadow: var(--shadow-card); }
 }
