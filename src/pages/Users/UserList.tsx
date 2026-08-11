@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { User, Shield, Plus, Mail } from 'lucide-react';
+import { User, Shield, Plus, Mail, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { MessageDialog } from '../../components/ui/MessageDialog';
 
@@ -26,6 +26,7 @@ export const UserList = () => {
     title: undefined,
     message: '',
   });
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -207,6 +208,19 @@ export const UserList = () => {
     setEditForm({ id: '', name: '', email: '', role: 'motorista', status: 'Ativo' });
   };
 
+  const handleDeleteUser = async (id: string) => {
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) {
+      console.error('Erro ao excluir usuário:', error.message);
+      setMessageDialog({ open: true, title: 'Erro', message: 'Não foi possível excluir o usuário. Tente novamente.' });
+    } else {
+      setUsers((current) => current.filter((u) => u.id !== id));
+      if (selectedUser?.id === id) handleCancelEdit();
+      setMessageDialog({ open: true, title: 'Sucesso', message: 'Usuário excluído com sucesso.' });
+    }
+    setConfirmDelete({ open: false, userId: null });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -378,9 +392,20 @@ export const UserList = () => {
                   event.stopPropagation();
                   toggleBlock(u.id);
                 }}
-                className="flex-1 py-1.5 bg-red-50 text-red-600 rounded text-xs font-bold hover:bg-red-100"
+                className="flex-1 py-1.5 bg-orange-50 text-orange-600 rounded text-xs font-bold hover:bg-orange-100"
               >
                 {u.status === 'Bloqueado' ? 'Desbloquear' : 'Bloquear'}
+              </button>
+              <button
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setConfirmDelete({ open: true, userId: u.id });
+                }}
+                title="Excluir usuário"
+                className="py-1.5 px-2 bg-red-50 text-red-600 rounded text-xs font-bold hover:bg-red-100 flex items-center gap-1"
+              >
+                <Trash2 size={13} />
+                Excluir
               </button>
             </div>
           </div>
@@ -392,6 +417,43 @@ export const UserList = () => {
         message={messageDialog.message}
         onClose={() => setMessageDialog({ open: false, title: undefined, message: '' })}
       />
+
+      {/* Confirmação de exclusão */}
+      {confirmDelete.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 size={22} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Excluir usuário</h3>
+                <p className="text-sm text-slate-500">Essa ação não pode ser desfeita.</p>
+              </div>
+            </div>
+            <p className="text-slate-600 text-sm">
+              Tem certeza que deseja excluir o usuário{' '}
+              <strong className="text-slate-800">
+                {users.find((u) => u.id === confirmDelete.userId)?.name}
+              </strong>?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete({ open: false, userId: null })}
+                className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => confirmDelete.userId && handleDeleteUser(confirmDelete.userId)}
+                className="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all"
+              >
+                Sim, excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
