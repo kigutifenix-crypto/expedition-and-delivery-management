@@ -54,6 +54,7 @@ create table if not exists deliveries (
   signature_role text,
   signature_ip inet,
   signature_gps text,
+  signature_data text,
   checklist jsonb not null default '{}'::jsonb,
   delivery_notes text,
   created_at timestamptz not null default now(),

@@ -32,6 +32,7 @@ type ExpeditionDeliverySignature = {
   signer_document?: string | null;
   signer_role?: string | null;
   signed_at?: string | null;
+  signature_data?: string | null;
 };
 
 const statusStyles: Record<string, string> = {
@@ -106,7 +107,7 @@ export const ExpeditionDetail = () => {
 
           const { data: deliveryData, error: deliveryError } = await supabase
             .from<ExpeditionDeliverySignature>('deliveries')
-            .select('signer_name, signer_document, signer_role, signed_at')
+            .select('signer_name, signer_document, signer_role, signed_at, signature_data')
             .eq('expedition_id', data.id)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -382,6 +383,11 @@ export const ExpeditionDetail = () => {
                         <p className="mt-1 font-semibold text-slate-900">{new Date(deliverySignature.signed_at).toLocaleString('pt-BR')}</p>
                       </div>
                     </div>
+                    {deliverySignature.signature_data && (
+                      <div className="mt-3 bg-white p-3 rounded-2xl border border-slate-200 flex items-center justify-center">
+                        <img src={deliverySignature.signature_data} alt="Desenho da Assinatura" className="max-h-40 w-auto object-contain" />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">

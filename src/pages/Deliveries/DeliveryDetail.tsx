@@ -25,6 +25,7 @@ interface Delivery {
   signer_role?: string;
   signature_gps?: string;
   signature_ip?: string;
+  signature_data?: string;
   checklist: {
     unloaded: boolean;
     installed: boolean;
@@ -170,23 +171,28 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       setSignatureName(deliveryData.signer_name ?? '');
       setSignatureDocument(deliveryData.signer_document ?? '');
       setSignatureRole(deliveryData.signer_role ?? '');
-      // Load last saved signature (if any)
-      try {
-        const { data: sigRow } = await supabase
-          .from('digital_signatures')
-          .select('signature_data')
-          .eq('delivery_id', id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
 
-        if (sigRow && (sigRow as any).signature_data) {
-          setSignatureImage((sigRow as any).signature_data);
-        } else {
+      // Load last saved signature (from delivery object or digital_signatures table)
+      if (deliveryData.signature_data) {
+        setSignatureImage(deliveryData.signature_data);
+      } else {
+        try {
+          const { data: sigRow } = await supabase
+            .from('digital_signatures')
+            .select('signature_data')
+            .eq('delivery_id', id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (sigRow && (sigRow as any).signature_data) {
+            setSignatureImage((sigRow as any).signature_data);
+          } else {
+            setSignatureImage(null);
+          }
+        } catch (err) {
           setSignatureImage(null);
         }
-      } catch (err) {
-        setSignatureImage(null);
       }
       setLoading(false);
     };
@@ -377,54 +383,76 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       return;
     }
 
+    let dataUrl: string | null = null;
+    try {
+      if (signatureRef.current?.getTrimmedCanvas) {
+        dataUrl = signatureRef.current.getTrimmedCanvas().toDataURL('image/png');
+      } else if (signatureRef.current?.toDataURL) {
+        dataUrl = signatureRef.current.toDataURL('image/png');
+      } else if (signatureRef.current?.getCanvas) {
+        dataUrl = signatureRef.current.getCanvas().toDataURL('image/png');
+      }
+    } catch (e) {
+      console.error('Erro ao converter canvas para dataURL:', e);
+    }
+
+    if (!dataUrl) {
+      setMessage('Falha ao capturar imagem da assinatura.');
+      return;
+    }
+
+    const nameToUse = signatureName.trim() || delivery.customer_name || 'Cliente';
+    const signedAt = new Date().toISOString();
+
     const { error } = await supabase
       .from('deliveries')
       .update({
-        signer_name: signatureName,
+        signer_name: nameToUse,
         signer_document: signatureDocument,
         signer_role: signatureRole,
         signature_gps: gps,
         signature_ip: ip,
-        signed_at: new Date().toISOString(),
+        signed_at: signedAt,
+        signature_data: dataUrl,
       })
       .eq('id', id);
 
     if (error) {
-      setMessage(error.message);
+      console.error('Erro ao atualizar entrega com assinatura:', error);
+      setMessage(`Erro ao registrar assinatura: ${error.message}`);
       return;
     }
 
     setDelivery({
       ...delivery,
-      signer_name: signatureName,
+      signer_name: nameToUse,
       signer_document: signatureDocument,
       signer_role: signatureRole,
       signature_gps: gps,
       signature_ip: ip,
-      signed_at: new Date().toISOString(),
+      signed_at: signedAt,
+      signature_data: dataUrl,
     });
+
+    setSignatureImage(dataUrl);
+
     // save signature drawing to digital_signatures table (base64 data)
     try {
-      const dataUrl = signatureRef.current?.getCanvas().toDataURL('image/png');
-      if (dataUrl) {
-        const { error: sigError } = await supabase.from('digital_signatures').insert({
-          delivery_id: id,
-          signer_name: signatureName,
-          signer_document: signatureDocument,
-          signer_role: signatureRole,
-          gps_location: gps,
-          ip_address: ip,
-          signature_data: dataUrl,
-        });
+      const { error: sigError } = await supabase.from('digital_signatures').insert({
+        delivery_id: id,
+        signer_name: nameToUse,
+        signer_document: signatureDocument,
+        signer_role: signatureRole,
+        gps_location: gps,
+        ip_address: ip,
+        signature_data: dataUrl,
+      });
 
-        if (sigError) {
-          console.error('Erro ao salvar assinatura na tabela digital_signatures:', sigError);
-        } else {
-          setSignatureImage(dataUrl);
-        }
+      if (sigError) {
+        console.error('Erro ao salvar assinatura na tabela digital_signatures:', sigError);
       }
     } catch (e) {
-      console.error('Erro ao processar imagem da assinatura:', e);
+      console.error('Erro ao salvar em digital_signatures:', e);
     }
 
     setMessage('Assinatura registrada com sucesso.');
@@ -761,8 +789,8 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
     doc.text(`Documento: ${delivery.signer_document || '—'}`, 14, 82);
     doc.text(`Cargo: ${delivery.signer_role || '—'}`, 14, 90);
 
-    // Try to get signature image (from state or from DB)
-    let sigData = signatureImage;
+    // Try to get signature image (from state, delivery object, or DB)
+    let sigData = signatureImage || delivery.signature_data;
     if (!sigData) {
       try {
         const { data: sigRow } = await supabase
@@ -1030,14 +1058,18 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Data de assinatura</p>
                   <p className="mt-2 text-slate-700">{delivery.signed_at ? new Date(delivery.signed_at).toLocaleString('pt-BR') : 'Nenhuma assinatura registrada'}</p>
                 </div>
-                {signatureImage && (
-                  <div className="rounded-3xl bg-white border border-slate-200 p-4 mt-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Assinatura</p>
-                    <div className="mt-2">
-                      <img src={signatureImage} alt="Assinatura do cliente" className="w-full h-auto object-contain rounded-md" />
+                <div className="rounded-3xl bg-white border border-slate-200 p-4 mt-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-2">Desenho da Assinatura</p>
+                  {signatureImage ? (
+                    <div className="mt-2 bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-center min-h-[140px]">
+                      <img src={signatureImage} alt="Assinatura do cliente" className="max-h-56 w-auto object-contain rounded-md" />
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="mt-2 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                      Nenhum desenho de assinatura visual registrado para esta entrega.
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="space-y-4">

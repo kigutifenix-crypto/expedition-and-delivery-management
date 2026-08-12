@@ -873,18 +873,18 @@ drop policy if exists digital_signatures_insert on public.digital_signatures;
 drop policy if exists digital_signatures_update on public.digital_signatures;
 drop policy if exists digital_signatures_delete on public.digital_signatures;
 create policy digital_signatures_select on public.digital_signatures for select using (
-  public.is_admin() or public.is_supervisor() or public.is_expedicao()
+  auth.uid() is not null or public.is_admin() or public.is_supervisor() or public.is_expedicao() or public.is_motorista()
 );
 create policy digital_signatures_insert on public.digital_signatures for insert with check (
-  public.is_admin() or public.is_supervisor() or public.is_expedicao()
+  auth.uid() is not null or public.is_admin() or public.is_supervisor() or public.is_expedicao() or public.is_motorista()
 );
 create policy digital_signatures_update on public.digital_signatures for update using (
-  public.is_admin() or public.is_supervisor() or public.is_expedicao()
+  auth.uid() is not null or public.is_admin() or public.is_supervisor() or public.is_expedicao() or public.is_motorista()
 ) with check (
-  public.is_admin() or public.is_supervisor() or public.is_expedicao()
+  auth.uid() is not null or public.is_admin() or public.is_supervisor() or public.is_expedicao() or public.is_motorista()
 );
 create policy digital_signatures_delete on public.digital_signatures for delete using (
-  public.is_admin() or public.is_supervisor() or public.is_expedicao()
+  auth.uid() is not null or public.is_admin() or public.is_supervisor() or public.is_expedicao() or public.is_motorista()
 );
 
 alter table public.warranties enable row level security;
@@ -1228,6 +1228,11 @@ drop trigger if exists audit_delivery_checklists on public.delivery_checklists;
 create trigger audit_delivery_checklists
   after insert or update or delete on public.delivery_checklists
   for each row execute function public.log_table_changes();
+
+-- Add signature_data column to deliveries if not exists
+alter table public.deliveries add column if not exists signature_data text;
+grant select, insert, update, delete on public.digital_signatures to anon;
+grant select, insert, update, delete on public.digital_signatures to authenticated;
 
 -- Notes:
 -- 1) Este arquivo é idempotente e utiliza checks existentes para preservar dados atuais.
