@@ -9,6 +9,9 @@ import { supabase } from '../lib/supabase';
 const FENIX_GUIDE_PDF_URL = import.meta.env.VITE_FENIX_GUIDE_PDF_URL || 
   'https://res.cloudinary.com/dglgtgahp/raw/upload/v1782826917/warranties/iiv55b8usesggjg1lewd.pdf';
 
+// Link direto para avaliação no Google
+const GOOGLE_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJU47Uhnurz5QRbBUNKIJR62o';
+
 export interface EmailMessage {
   to: string;
   subject: string;
@@ -122,6 +125,14 @@ export async function sendFenixGuideEmailAfterDelivery(
             <h3>❓ Dúvidas?</h3>
             <p>Nosso suporte técnico especializado está sempre à disposição para ajudá-lo!</p>
             <p><strong>Telefone:</strong> (97) 3612-175</p>
+
+            <div style="margin-top: 30px; padding: 20px; background: #fff8e1; border-radius: 10px; border: 2px solid #ffc107; text-align: center;">
+              <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: bold; color: #333;">⭐ Sua opinião vale muito para nós!</p>
+              <p style="margin: 0 0 16px 0; font-size: 13px; color: #666;">Leva menos de 1 minuto e ajuda muito nosso negócio.</p>
+              <a href="${GOOGLE_REVIEW_URL}" style="display: inline-block; background: #4285F4; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px;">
+                🌟 Avaliar no Google
+              </a>
+            </div>
           </div>
 
           <div class="footer">

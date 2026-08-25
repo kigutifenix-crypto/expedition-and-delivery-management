@@ -9,6 +9,9 @@ import { supabase } from '../lib/supabase';
 const FENIX_GUIDE_PDF_URL = import.meta.env.VITE_FENIX_GUIDE_PDF_URL || 
   'https://res.cloudinary.com/dglgtgahp/raw/upload/v1782826917/warranties/iiv55b8usesggjg1lewd.pdf';
 
+// Link direto para avaliação no Google
+const GOOGLE_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJU47Uhnurz5QRbBUNKIJR62o';
+
 export interface WhatsAppMessage {
   phone: string;
   message: string;
@@ -59,7 +62,7 @@ export async function sendFenixGuideAfterDelivery(
   customerName: string,
   equipmentName: string
 ): Promise<WhatsAppResponse> {
-  const message = `Olá ${customerName}! 👋\n\nSua entrega foi finalizada com sucesso! ✅\n\nAnexo, você encontra o guia completo de cuidados essenciais para manter a garantia do seu equipamento ${equipmentName} ativa.\n\n🛡️ *Garantia Fenix Brasil - 90 dias*\n\nQualquer dúvida, estamos à disposição!\n\nAtenciosamente,\nFenix Brasil 🚀`;
+  const message = `Olá ${customerName}! 👋\n\nSua entrega foi finalizada com sucesso! ✅\n\nAnexo, você encontra o guia completo de cuidados essenciais para manter a garantia do seu equipamento ${equipmentName} ativa.\n\n🛡️ *Garantia Fenix Brasil - 90 dias*\n\nQualquer dúvida, estamos à disposição!\n\n⭐ *Sua opinião vale muito!*\nLeva menos de 1 minuto — avalie nosso serviço no Google:\n${GOOGLE_REVIEW_URL}\n\nAtenciosamente,\nFenix Brasil 🚀`;
 
   return sendWhatsAppMessage({
     phone: customerPhone,

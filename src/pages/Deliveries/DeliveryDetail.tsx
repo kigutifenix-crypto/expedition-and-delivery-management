@@ -1258,13 +1258,13 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                 />
               </div>
 
-              {/* Email do cliente para envio do guia de garantia */}
+              {/* Email do cliente para envio do guia de garantia e link do Google */}
               <div className="rounded-3xl border border-blue-100 bg-blue-50/60 p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">E-mail para guia de garantia</p>
+                    <p className="text-sm font-semibold text-slate-900">E-mail do cliente</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Se não cadastrado na expedição, informe o e-mail do cliente para receber o guia.
+                      Será enviado o guia de garantia <strong>e o link para avaliação no Google</strong>. Se já cadastrado na expedição, será usado automaticamente.
                     </p>
                   </div>
                   <span className="rounded-full bg-blue-100 px-3 py-1 text-xs uppercase tracking-[0.18em] text-blue-600">Opcional</span>
@@ -1276,7 +1276,12 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                   placeholder="cliente@email.com"
                   className="mt-4 w-full rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-blue-600">
+                  <span>⭐</span>
+                  <span>O link do Google para avaliação também será enviado junto ao email e WhatsApp.</span>
+                </p>
               </div>
+
 
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <button
