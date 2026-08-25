@@ -36,3 +36,10 @@ log/
 
 # Generated files
 *.tsbuildinfo
+
+# Archives and backups
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.bak
