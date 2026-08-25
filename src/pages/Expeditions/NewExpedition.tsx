@@ -134,6 +134,8 @@ export const NewExpedition = () => {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
   const [currentUploadType, setCurrentUploadType] = useState<'photo' | 'video'>('photo');
+  const [photoUploadProgress, setPhotoUploadProgress] = useState(0);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const [saving, setSaving] = useState(false);
   const [stepError, setStepError] = useState('');
 
@@ -341,23 +343,41 @@ const normalizeStatus = (inputStatus: string) => {
       }
 
       setUploadingPhoto(true);
-      setUploadMessage('Enviando foto(s)...');
+      setPhotoUploadProgress(0);
+      setUploadMessage('Comprimindo e enviando foto(s)...');
       const selectedType = photoTypeToUpload || 'expedition';
-      const newPhotos: ExpeditionPhoto[] = [];
+      const filesToUpload = Array.from(files).slice(0, 6 - photos.length);
+      let completedCount = 0;
 
       try {
-        for (const file of Array.from(files).slice(0, 6 - photos.length)) {
-          const uploadResult = await uploadImageToCloudinary(file, `expeditions/${new Date().toISOString().slice(0, 10)}`);
-          newPhotos.push({
-            id: crypto.randomUUID(),
-            label: selectedType,
-            photo_type: selectedType.toLowerCase().replace(/\s+/g, '_'),
-            publicUrl: uploadResult.secure_url,
-            public_id: uploadResult.public_id,
-          });
-        }
+        // Upload em paralelo de todas as fotos simultaneamente
+        const results = await Promise.all(
+          filesToUpload.map((file) =>
+            uploadImageToCloudinary(file, `expeditions/${new Date().toISOString().slice(0, 10)}`, {
+              onProgress: (percent) => {
+                // Progresso médio de todos os uploads em andamento
+                const overallPercent = Math.round(
+                  ((completedCount * 100 + percent) / filesToUpload.length)
+                );
+                setPhotoUploadProgress(overallPercent);
+              },
+            }).then((result) => {
+              completedCount += 1;
+              return result;
+            })
+          )
+        );
+
+        const newPhotos: ExpeditionPhoto[] = results.map((uploadResult) => ({
+          id: crypto.randomUUID(),
+          label: selectedType,
+          photo_type: selectedType.toLowerCase().replace(/\s+/g, '_'),
+          publicUrl: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+        }));
 
         setPhotos((current) => [...current, ...newPhotos]);
+        setPhotoUploadProgress(100);
         setUploadMessage(`${newPhotos.length} foto(s) enviadas com sucesso.`);
       } catch (error: any) {
         console.error('Falha ao enviar foto:', error);
@@ -376,21 +396,28 @@ const normalizeStatus = (inputStatus: string) => {
       }
 
       setUploadingVideo(true);
-      setUploadMessage('Enviando vídeo(s)...');
-      const newVideos: ExpeditionVideo[] = [];
+      setVideoUploadProgress(0);
+      setUploadMessage('Enviando vídeo...');
 
       try {
-        for (const file of Array.from(files).slice(0, 5 - videos.length)) {
-          const uploadResult = await uploadVideoToCloudinary(file, `expeditions/${new Date().toISOString().slice(0, 10)}`);
-          newVideos.push({
-            id: crypto.randomUUID(),
-            label: 'Vídeo',
-            publicUrl: uploadResult.secure_url,
-            public_id: uploadResult.public_id,
-          });
-        }
+        const filesToUpload = Array.from(files).slice(0, 5 - videos.length);
+        const results = await Promise.all(
+          filesToUpload.map((file) =>
+            uploadVideoToCloudinary(file, `expeditions/${new Date().toISOString().slice(0, 10)}`, {
+              onProgress: (percent) => setVideoUploadProgress(percent),
+            })
+          )
+        );
+
+        const newVideos: ExpeditionVideo[] = results.map((uploadResult) => ({
+          id: crypto.randomUUID(),
+          label: 'Vídeo',
+          publicUrl: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+        }));
 
         setVideos((current) => [...current, ...newVideos]);
+        setVideoUploadProgress(100);
         setUploadMessage(`${newVideos.length} vídeo(s) enviado(s) com sucesso.`);
       } catch (error: any) {
         console.error('Falha ao enviar vídeo:', error);
@@ -1039,7 +1066,21 @@ const normalizeStatus = (inputStatus: string) => {
                 {uploadingPhoto ? 'Enviando...' : 'Adicionar foto'}
               </button>
 
-              {uploadMessage && (
+              {uploadingPhoto && (
+                <div className="mt-4 space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold text-slate-600">
+                    <span>{uploadMessage}</span>
+                    <span>{photoUploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                      style={{ width: `${photoUploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {!uploadingPhoto && uploadMessage && (
                 <p className="mt-3 text-sm text-slate-600">{uploadMessage}</p>
               )}
             </section>
@@ -1095,7 +1136,21 @@ const normalizeStatus = (inputStatus: string) => {
                 {uploadingVideo ? 'Enviando...' : 'Adicionar vídeo'}
               </button>
 
-              {uploadMessage && (
+              {uploadingVideo && (
+                <div className="mt-4 space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold text-slate-600">
+                    <span>{uploadMessage}</span>
+                    <span>{videoUploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 rounded-full transition-all duration-300"
+                      style={{ width: `${videoUploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {!uploadingVideo && uploadMessage && (
                 <p className="mt-3 text-sm text-slate-600">{uploadMessage}</p>
               )}
             </section>

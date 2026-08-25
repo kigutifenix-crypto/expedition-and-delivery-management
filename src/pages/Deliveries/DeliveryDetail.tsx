@@ -74,6 +74,8 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [uploading, setUploading] = useState('');
+  const [photoUploadProgress, setPhotoUploadProgress] = useState(0);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const [selectedPhotoType, setSelectedPhotoType] = useState('');
   const [currentUploadType, setCurrentUploadType] = useState<'photo' | 'video'>('photo');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -271,10 +273,13 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   const handlePhotoUpload = async (photoType: string, fileList: FileList | null) => {
     if (!id || !fileList || fileList.length === 0 || !photoType) return;
     setUploading(photoType);
+    setPhotoUploadProgress(0);
 
     try {
       const file = fileList[0];
-      const { path, publicUrl } = await uploadDeliveryPhoto(id, file, photoType);
+      const { path, publicUrl } = await uploadDeliveryPhoto(id, file, photoType, {
+        onProgress: (percent) => setPhotoUploadProgress(percent),
+      });
       const existingPhoto = photos.find((photo) => photo.photo_type === photoType);
 
       if (existingPhoto) {
@@ -309,10 +314,13 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   const handleVideoUpload = async (fileList: FileList | null) => {
     if (!id || !fileList || fileList.length === 0) return;
     setUploading('video');
+    setVideoUploadProgress(0);
 
     try {
       const file = fileList[0];
-      const uploadResult = await uploadVideoToCloudinary(file, `deliveries/${id}`);
+      const uploadResult = await uploadVideoToCloudinary(file, `deliveries/${id}`, {
+        onProgress: (percent) => setVideoUploadProgress(percent),
+      });
 
       // Persist to Supabase using delivery_photos with photo_type='video'
       const { data: savedVideo, error: saveError } = await supabase
@@ -978,6 +986,20 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                     className="hidden"
                     onChange={handleFileInputChange}
                   />
+                  {uploading && uploading !== 'video' && (
+                    <div className="mt-3 space-y-1.5">
+                      <div className="flex justify-between text-xs font-semibold text-slate-600">
+                        <span>Comprimindo e enviando...</span>
+                        <span>{photoUploadProgress}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                          style={{ width: `${photoUploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -1025,6 +1047,20 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                     <Video size={20} />
                     {uploading === 'video' ? 'Enviando vídeo...' : 'Enviar vídeo'}
                   </button>
+                  {uploading === 'video' && (
+                    <div className="mt-3 space-y-1.5">
+                      <div className="flex justify-between text-xs font-semibold text-slate-600">
+                        <span>Enviando vídeo...</span>
+                        <span>{videoUploadProgress}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-500 rounded-full transition-all duration-300"
+                          style={{ width: `${videoUploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
