@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 
 // PDF URL from Cloudinary - Fenix Guarantee Guide
 const FENIX_GUIDE_PDF_URL = import.meta.env.VITE_FENIX_GUIDE_PDF_URL || 
-  'https://res.cloudinary.com/dglgtgahp/raw/upload/v1782826917/warranties/iiv55b8usesggjg1lewd.pdf';
+  'https://res.cloudinary.com/dglgtgahp/raw/upload/v1787668355/warranties/guia-de-garantia-fenix';
 
 // Link direto para avaliação no Google
 const GOOGLE_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJU47Uhnurz5QRbBUNKIJR62o';
