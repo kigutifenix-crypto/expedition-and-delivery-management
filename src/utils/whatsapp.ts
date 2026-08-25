@@ -116,14 +116,42 @@ export async function getCustomerPhone(customerId: string): Promise<string | nul
       .eq('id', customerId)
       .maybeSingle();
 
-    if (error) {
-      console.error('Error fetching customer phone:', error);
-      return null;
-    }
-
     return data?.phone || null;
   } catch (err) {
     console.error('Failed to get customer phone:', err);
     return null;
   }
+}
+
+/**
+ * Build direct WhatsApp Web / App URL with pre-filled message (Google review + PDF guide)
+ */
+export function buildWhatsAppDirectUrl(
+  phone: string,
+  customerName?: string,
+  equipmentOrOrder?: string
+): string {
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return '';
+  const fullPhone = digits.startsWith('55') ? digits : `55${digits}`;
+  const clientName = customerName?.trim() || 'Cliente';
+  const itemDesc = equipmentOrOrder?.trim() || '';
+
+  const message = `Olá ${clientName}! 👋\n\nSua entrega ${itemDesc ? `(${itemDesc}) ` : ''}foi finalizada com sucesso! ✅\n\n📄 *Guia de Cuidados e Garantia (90 dias):*\n${FENIX_GUIDE_PDF_URL}\n\n⭐ *Sua opinião vale muito para nós!*\nPoderia avaliar nosso atendimento no Google? Leva menos de 1 minuto no celular:\n${GOOGLE_REVIEW_URL}\n\nMuito obrigado pela confiança!\n*Fenix Brasil* 🚀`;
+
+  return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Opens WhatsApp directly in browser / app with pre-filled message
+ */
+export function openWhatsAppDirect(
+  phone: string,
+  customerName?: string,
+  equipmentOrOrder?: string
+): boolean {
+  const url = buildWhatsAppDirectUrl(phone, customerName, equipmentOrOrder);
+  if (!url) return false;
+  window.open(url, '_blank');
+  return true;
 }

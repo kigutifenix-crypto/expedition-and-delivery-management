@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, MapPin, User, Briefcase, Camera, CheckCircle2, Signature, Star, Download, FileText, QrCode, ShieldCheck, Video } from 'lucide-react';
+import { ArrowLeft, MapPin, User, Briefcase, Camera, CheckCircle2, Signature, Star, Download, FileText, QrCode, ShieldCheck, Video, MessageSquare, Send, Phone } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { supabase, uploadDeliveryPhoto } from '../../lib/supabase';
 import { uploadVideoToCloudinary } from '../../lib/cloudinary';
-import { sendFenixGuideAfterDelivery, logWhatsAppMessage, getCustomerPhone } from '../../utils/whatsapp';
+import { sendFenixGuideAfterDelivery, logWhatsAppMessage, getCustomerPhone, openWhatsAppDirect, buildWhatsAppDirectUrl } from '../../utils/whatsapp';
 import { sendFenixGuideEmailAfterDelivery, logEmailMessage, getCustomerEmail } from '../../utils/email';
 
 interface Delivery {
@@ -96,6 +96,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   const [feedbackEquipmentRating, setFeedbackEquipmentRating] = useState(5);
   const [feedbackComments, setFeedbackComments] = useState('');
   const [manualEmail, setManualEmail] = useState('');
+  const [manualPhone, setManualPhone] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -126,12 +127,14 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       if (!customerName && deliveryData.customer_id) {
         const { data: customerData, error: customerError } = await supabase
           .from('customers')
-          .select('name')
+          .select('name, phone, email')
           .eq('id', deliveryData.customer_id)
           .maybeSingle();
 
         if (!customerError && customerData) {
           customerName = customerData.name;
+          if (customerData.phone) setManualPhone(customerData.phone);
+          if (customerData.email) setManualEmail(customerData.email);
         }
       }
 
@@ -563,37 +566,25 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       return;
     }
 
-    // Send WhatsApp with Fenix guide PDF when delivery is finalized
+    // Send WhatsApp with Fenix guide PDF and Google Review link when delivery is finalized
     if (pendingStatus === 'finalizado') {
-      try {
-        const customerPhone = await getCustomerPhone(currentDelivery.customer_id);
-        if (customerPhone) {
-          const result = await sendFenixGuideAfterDelivery(
-            id,
-            customerPhone,
-            delivery.customer_name || 'Cliente',
-            delivery.order_number || 'equipamento'
-          );
+      const phoneToUse = manualPhone.trim() || await getCustomerPhone(currentDelivery.customer_id);
+      if (phoneToUse) {
+        // Open WhatsApp Web/App directly with prefilled message (Google Review + PDF Guide)
+        openWhatsAppDirect(phoneToUse, delivery.customer_name, delivery.order_number);
 
-          // Log the WhatsApp message in database
+        try {
           await logWhatsAppMessage(
             id,
             currentDelivery.customer_id,
-            customerPhone,
+            phoneToUse,
             'GARANTIA',
-            `Guia de Garantia Fenix enviado para ${delivery.customer_name}`,
-            result.success ? 'sent' : 'failed'
+            `Guia de Garantia Fenix e link Google enviados para ${delivery.customer_name}`,
+            'sent'
           );
-
-          if (result.success) {
-            console.log('Guia Fenix enviado via WhatsApp:', result.messageId);
-          } else {
-            console.warn('Falha ao enviar guia Fenix:', result.error);
-          }
+        } catch (err) {
+          console.error('Erro ao registrar log do WhatsApp:', err);
         }
-      } catch (err) {
-        console.error('Erro ao enviar WhatsApp:', err);
-        // Continue even if WhatsApp fails
       }
 
       // Send Email with Fenix guide PDF when delivery is finalized
@@ -695,37 +686,23 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
       return;
     }
 
-    // Send WhatsApp with Fenix guide PDF when delivery is finalized
+    // Send WhatsApp with Fenix guide PDF and Google Review link when delivery is finalized
     if (pendingStatus === 'finalizado') {
-      try {
-        const customerPhone = await getCustomerPhone(currentDelivery.customer_id);
-        if (customerPhone) {
-          const result = await sendFenixGuideAfterDelivery(
-            id,
-            customerPhone,
-            delivery.customer_name || 'Cliente',
-            delivery.order_number || 'equipamento'
-          );
-
-          // Log the WhatsApp message in database
+      const phoneToUse = manualPhone.trim() || await getCustomerPhone(currentDelivery.customer_id);
+      if (phoneToUse) {
+        openWhatsAppDirect(phoneToUse, delivery.customer_name, delivery.order_number);
+        try {
           await logWhatsAppMessage(
             id,
             currentDelivery.customer_id,
-            customerPhone,
+            phoneToUse,
             'GARANTIA',
-            `Guia de Garantia Fenix enviado para ${delivery.customer_name}`,
-            result.success ? 'sent' : 'failed'
+            `Guia de Garantia Fenix e link Google enviados para ${delivery.customer_name}`,
+            'sent'
           );
-
-          if (result.success) {
-            console.log('Guia Fenix enviado via WhatsApp:', result.messageId);
-          } else {
-            console.warn('Falha ao enviar guia Fenix:', result.error);
-          }
+        } catch (err) {
+          console.error('Erro ao registrar log do WhatsApp:', err);
         }
-      } catch (err) {
-        console.error('Erro ao enviar WhatsApp:', err);
-        // Continue even if WhatsApp fails
       }
 
       // Send Email with Fenix guide PDF when delivery is finalized
@@ -759,6 +736,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
         // Continue even if email fails
       }
     }
+
 
     setShowFeedbackModal(false);
     setPendingStatus(null);
@@ -1180,11 +1158,26 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+            <button
+              type="button"
+              onClick={() => {
+                const phoneToUse = manualPhone.trim();
+                if (!phoneToUse.replace(/\D/g, '')) {
+                  setMessage('Informe o WhatsApp do cliente para enviar a mensagem.');
+                  setShowFeedbackModal(true);
+                  return;
+                }
+                openWhatsAppDirect(phoneToUse, delivery.customer_name, delivery.order_number);
+              }}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-sm transition-all"
+            >
+              <MessageSquare size={18} /> Enviar Guia + Avaliação (WhatsApp)
+            </button>
             <button onClick={generatePdf} className="w-full bg-slate-900 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2">
               <Download size={18} /> Gerar PDF de Entrega
             </button>
             {!isViewMode && (
-              <button onClick={finalizeDelivery} className="w-full bg-green-600 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2">
+              <button onClick={finalizeDelivery} className="w-full bg-blue-600 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2">
                 <FileText size={18} /> Finalizar e Solicitar Feedback
               </button>
             )}
@@ -1258,16 +1251,54 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                 />
               </div>
 
-              {/* Email do cliente para envio do guia de garantia e link do Google */}
-              <div className="rounded-3xl border border-blue-100 bg-blue-50/60 p-5">
+              {/* WhatsApp do cliente (1 clique - Guia + Google Review) */}
+              <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                      <MessageSquare size={16} className="text-emerald-600" />
+                      WhatsApp do cliente (Envio em 1 clique)
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Abre o WhatsApp com o <strong>Guia de Garantia PDF</strong> e o <strong>Link do Google</strong> para avaliação em 1 toque.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs uppercase tracking-[0.18em] text-emerald-700 font-bold w-fit">Recomendado</span>
+                </div>
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="tel"
+                    value={manualPhone}
+                    onChange={(e) => setManualPhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="flex-1 rounded-[20px] border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!manualPhone.replace(/\D/g, '')) {
+                        alert('Digite o número de WhatsApp do cliente com DDD.');
+                        return;
+                      }
+                      openWhatsAppDirect(manualPhone, delivery.customer_name, delivery.order_number);
+                    }}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[20px] text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <MessageSquare size={15} /> Abrir WhatsApp Agora
+                  </button>
+                </div>
+              </div>
+
+              {/* Email do cliente (Opcional) */}
+              <div className="rounded-3xl border border-slate-200 bg-slate-50/60 p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">E-mail do cliente</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Será enviado o guia de garantia <strong>e o link para avaliação no Google</strong>. Se já cadastrado na expedição, será usado automaticamente.
+                      Opcional: se desejar registrar o e-mail do cliente no sistema.
                     </p>
                   </div>
-                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs uppercase tracking-[0.18em] text-blue-600">Opcional</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-500">Opcional</span>
                 </div>
                 <input
                   type="email"
@@ -1276,10 +1307,6 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
                   placeholder="cliente@email.com"
                   className="mt-4 w-full rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-blue-600">
-                  <span>⭐</span>
-                  <span>O link do Google para avaliação também será enviado junto ao email e WhatsApp.</span>
-                </p>
               </div>
 
 
