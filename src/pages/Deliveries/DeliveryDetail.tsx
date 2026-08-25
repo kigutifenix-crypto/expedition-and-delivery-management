@@ -92,6 +92,7 @@ export const DeliveryDetail = ({ mode = 'view' }: DeliveryDetailProps) => {
   const [feedbackDeliveryRating, setFeedbackDeliveryRating] = useState(5);
   const [feedbackInstallationRating, setFeedbackInstallationRating] = useState(5);
   const [feedbackServiceRating, setFeedbackServiceRating] = useState(5);
+  const [feedbackEquipmentRating, setFeedbackEquipmentRating] = useState(5);
   const [feedbackComments, setFeedbackComments] = useState('');
   const [manualPhone, setManualPhone] = useState('');
 
