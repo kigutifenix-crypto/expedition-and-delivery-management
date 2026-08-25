@@ -5,9 +5,9 @@
 
 import { supabase } from '../lib/supabase';
 
-// Fenix Guide PDF - Store this in your Cloudinary or public storage
+// Fenix Guide PDF - Direct public CDN URL that opens/downloads as PDF anywhere
 const FENIX_GUIDE_PDF_URL = import.meta.env.VITE_FENIX_GUIDE_PDF_URL || 
-  'https://res.cloudinary.com/dglgtgahp/raw/upload/v1787668355/warranties/guia-de-garantia-fenix';
+  'https://cdn.jsdelivr.net/gh/kigutifenix-crypto/expedition-and-delivery-management@main/guia-de-garantia-fenix.pdf';
 
 // Link direto para avaliação no Google
 const GOOGLE_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJU47Uhnurz5QRbBUNKIJR62o';
